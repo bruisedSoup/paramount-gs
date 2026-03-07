@@ -11,3 +11,4 @@ Pillow==10.4.0
 sqlparse==0.4.4
 pytz
 motor==3.3.2
+setuptools==82.0.0
