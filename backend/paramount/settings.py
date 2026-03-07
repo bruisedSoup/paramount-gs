@@ -52,15 +52,11 @@ TEMPLATES = [{
 
 WSGI_APPLICATION = 'paramount.wsgi.application'
 
-# ── MongoDB via Djongo ─────────────────────────────────
+# ── MongoDB  ─────────────────────────────────
 DATABASES = {
     'default': {
-        'ENGINE': 'djongo',
-        'ENFORCE_SCHEMA': False,
-        'NAME': 'paramount_gadget',
-        'CLIENT': {
-            'host': config('MONGODB_URI', default='mongodb://localhost:27017'),
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
