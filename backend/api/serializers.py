@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Product, Order, OrderItem
+from .models import User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -26,49 +26,44 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'role', 'created_at']
 
 
-class ProductSerializer(serializers.ModelSerializer):
-    image_url = serializers.SerializerMethodField()
+# ── MongoDB serializers (mongoengine → plain dict) ────────
 
-    class Meta:
-        model  = Product
-        fields = ['id', 'name', 'description', 'price', 'stock',
-                  'category', 'image', 'image_url', 'created_at']
-        read_only_fields = ['id', 'created_at', 'image_url']
-
-    def get_image_url(self, obj):
-        if obj.image:
-            try: return str(obj.image.url)
-            except: return None
-        return None
-
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    product_name  = serializers.CharField(source='product.name', read_only=True)
-    product_image = serializers.SerializerMethodField()
-
-    class Meta:
-        model  = OrderItem
-        fields = ['id', 'product', 'product_name', 'product_image',
-                  'quantity', 'price_at_purchase']
-
-    def get_product_image(self, obj):
-        if obj.product and obj.product.image:
-            try: return str(obj.product.image.url)
-            except: return None
-        return None
+def serialize_product(p):
+    return {
+        'id':          str(p.id),
+        'name':        p.name,
+        'description': p.description,
+        'price':       str(p.price),
+        'stock':       p.stock,
+        'category':    p.category,
+        'image_url':   p.image_url or '',
+        'created_at':  p.created_at.isoformat() if p.created_at else None,
+    }
 
 
-class OrderSerializer(serializers.ModelSerializer):
-    items      = OrderItemSerializer(many=True, read_only=True)
-    user_name  = serializers.CharField(source='user.name', read_only=True)
-    user_email = serializers.CharField(source='user.email', read_only=True)
+def serialize_order_item(i):
+    return {
+        'product_id':        i.product_id,
+        'product_name':      i.product_name,
+        'product_image':     i.product_image or '',
+        'quantity':          i.quantity,
+        'price_at_purchase': str(i.price_at_purchase),
+    }
 
-    class Meta:
-        model  = Order
-        fields = ['id', 'user', 'user_name', 'user_email', 'items',
-                  'total_price', 'status', 'shipping_address',
-                  'notes', 'created_at']
-        read_only_fields = ['id', 'user', 'created_at']
+
+def serialize_order(o):
+    return {
+        'id':               str(o.id),
+        'user_id':          o.user_id,
+        'user_name':        o.user_name,
+        'user_email':       o.user_email,
+        'items':            [serialize_order_item(i) for i in o.items],
+        'total_price':      str(o.total_price),
+        'status':           o.status,
+        'shipping_address': o.shipping_address or '',
+        'notes':            o.notes or '',
+        'created_at':       o.created_at.isoformat() if o.created_at else None,
+    }
 
 
 class CreateOrderSerializer(serializers.Serializer):

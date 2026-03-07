@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
@@ -6,8 +5,8 @@ import mongoengine
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('JWT_SECRET_KEY', default='fallback-super-secret-key-change-this-in-production-please')
-DEBUG = config('DEBUG', default=True, cast=bool)
+SECRET_KEY = config('JWT_SECRET_KEY', default='change-this-to-a-very-long-random-secret-key-in-production')
+DEBUG      = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -37,7 +36,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'paramount.urls'
+ROOT_URLCONF     = 'paramount.urls'
+WSGI_APPLICATION = 'paramount.wsgi.application'
 
 TEMPLATES = [{
     'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -51,26 +51,23 @@ TEMPLATES = [{
     ]},
 }]
 
-WSGI_APPLICATION = 'paramount.wsgi.application'
-
-# ── SQLite for Django auth/sessions/JWT blacklist ────────
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# ── SQLite locally, PostgreSQL in production ──────────────
+DATABASE_URL = config('DATABASE_URL', default='')
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL)}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME':   BASE_DIR / 'db.sqlite3',
+        }
     }
-}
 
-# ── MongoDB Atlas via mongoengine (Products, Orders) ─────
+# ── MongoDB Atlas via mongoengine ─────────────────────────
 MONGODB_URI = config('MONGODB_URI', default='')
-if MONGODB_URI:
-    mongoengine.connect(
-        db='paramount_db',
-        host=MONGODB_URI,
-        uuidRepresentation='standard'
-    )
 
-# ── Cloudinary Image Storage ──────────────────────────────
+# ── Cloudinary ────────────────────────────────────────────
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
     'API_KEY':    config('CLOUDINARY_API_KEY', default=''),
@@ -79,7 +76,7 @@ CLOUDINARY_STORAGE = {
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 MEDIA_URL = '/media/'
 
-# ── Django REST Framework ─────────────────────────────────
+# ── DRF ───────────────────────────────────────────────────
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -89,13 +86,13 @@ REST_FRAMEWORK = {
     ],
 }
 
-# ── JWT Settings ──────────────────────────────────────────
+# ── JWT ───────────────────────────────────────────────────
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME':  timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS':  True,
+    'ACCESS_TOKEN_LIFETIME':    timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME':   timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS':    True,
     'BLACKLIST_AFTER_ROTATION': True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_TYPES':        ('Bearer',),
 }
 
 # ── CORS ──────────────────────────────────────────────────
@@ -106,10 +103,10 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-AUTH_USER_MODEL   = 'api.User'
-STATIC_URL        = '/static/'
+AUTH_USER_MODEL    = 'api.User'
+STATIC_URL         = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-LANGUAGE_CODE     = 'en-us'
-TIME_ZONE         = 'UTC'
-USE_I18N          = True
-USE_TZ            = True
+LANGUAGE_CODE      = 'en-us'
+TIME_ZONE          = 'UTC'
+USE_I18N           = True
+USE_TZ             = True
