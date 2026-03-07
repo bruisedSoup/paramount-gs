@@ -7,3 +7,16 @@ venv/
 # Python cache
 __pycache__/
 *.py[cod]
+
+# Ignore node_modules inside the electron folder
+electron/node_modules/
+
+# Ignore any distribution/build folders
+electron/dist/
+
+# Keep your lock file, but ignore logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+electron/
