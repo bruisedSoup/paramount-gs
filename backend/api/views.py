@@ -1,15 +1,15 @@
-from rest_framework import generics, status, permissions
+from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import User
-from .mongo_models import Product, Order, OrderItem
+from .mongo_models import Product, Order, OrderItem, Review, ReviewReply, ProductUpdate, UpdateComment
 from .serializers import (
     RegisterSerializer, UserSerializer,
-    CreateOrderSerializer,
-    serialize_product, serialize_order,
+    CreateOrderSerializer, CreateReviewSerializer, CreateProductUpdateSerializer,
+    serialize_product, serialize_order, serialize_review, serialize_product_update,
 )
 import cloudinary
 import cloudinary.uploader
@@ -102,16 +102,13 @@ class ProductListView(APIView):
     def post(self, request):
         data      = request.data
         image_url = ''
-
         if 'image' in request.FILES:
             try:
                 result    = cloudinary.uploader.upload(request.FILES['image'])
                 image_url = result.get('secure_url', '')
             except Exception as e:
-                # Log it but don't block the save — just skip the image
                 print(f"Image upload warning: {str(e)}")
-                image_url = ''   # ← proceed without image instead of returning 400
-
+                image_url = ''
         try:
             product = Product(
                 name        = data.get('name', ''),
@@ -127,25 +124,6 @@ class ProductListView(APIView):
         except Exception as e:
             print("PRODUCT SAVE ERROR:", str(e))
             return Response({'detail': str(e)}, status=400)
-
-
-    def patch(self, request, pk):
-        p = self.get_object(pk)
-        if not p: return Response({'detail': 'Not found'}, status=404)
-        data = request.data
-        if 'name'        in data: p.name        = data['name']
-        if 'description' in data: p.description = data['description']
-        if 'price'       in data: p.price       = float(data['price'])
-        if 'stock'       in data: p.stock       = int(data['stock'])
-        if 'category'    in data: p.category    = data['category']
-        if 'image' in request.FILES:
-            try:
-                result      = cloudinary.uploader.upload(request.FILES['image'])
-                p.image_url = result.get('secure_url', '')
-            except Exception as e:
-                print(f"Image upload warning: {str(e)}")  # ← skip, don't fail
-        p.save()
-        return Response(serialize_product(p))
 
 
 class ProductDetailView(APIView):
@@ -177,10 +155,10 @@ class ProductDetailView(APIView):
         if 'category'    in data: p.category    = data['category']
         if 'image' in request.FILES:
             try:
-                result    = cloudinary.uploader.upload(request.FILES['image'])
+                result      = cloudinary.uploader.upload(request.FILES['image'])
                 p.image_url = result.get('secure_url', '')
             except Exception as e:
-                return Response({'detail': f'Image upload failed: {str(e)}'}, status=400)
+                print(f"Image upload warning: {str(e)}")
         p.save()
         return Response(serialize_product(p))
 
@@ -266,19 +244,179 @@ class OrderDetailView(APIView):
         return Response(serialize_order(order))
 
     def patch(self, request, pk):
-        if request.user.role != 'admin':
-            return Response({'detail': 'Admin only'}, status=403)
+        # Admin updates status; user can mark as received (delivered)
         try:
             order = Order.objects.get(id=pk)
         except Exception:
             return Response({'detail': 'Not found'}, status=404)
-        new_status = request.data.get('status')
-        valid = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
-        if new_status not in valid:
-            return Response({'detail': 'Invalid status'}, status=400)
-        order.status = new_status
-        order.save()
-        return Response(serialize_order(order))
+
+        # Admin: can set any valid status
+        if request.user.role == 'admin':
+            new_status = request.data.get('status')
+            valid = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
+            if new_status not in valid:
+                return Response({'detail': 'Invalid status'}, status=400)
+            order.status = new_status
+            order.save()
+            return Response(serialize_order(order))
+
+        # Customer: can only confirm receipt (shipped → delivered)
+        if order.user_id != request.user.id:
+            return Response({'detail': 'Not found'}, status=404)
+        action = request.data.get('action')
+        if action == 'confirm_received':
+            if order.status != 'shipped':
+                return Response({'detail': 'Order must be shipped first'}, status=400)
+            order.status = 'delivered'
+            order.save()
+            return Response(serialize_order(order))
+
+        return Response({'detail': 'Invalid action'}, status=400)
+
+
+# ── Reviews ───────────────────────────────────────────────
+
+class ProductReviewsView(APIView):
+    """GET all reviews for a product (public); POST a new review (auth required)"""
+
+    def get_permissions(self):
+        if self.request.method == 'GET': return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get(self, request, product_id):
+        reviews = Review.objects.filter(product_id=product_id)
+        data    = [serialize_review(r) for r in reviews]
+
+        # Compute rating stats
+        total = len(data)
+        if total:
+            avg        = sum(r['rating'] for r in data) / total
+            dist       = {i: 0 for i in range(1, 6)}
+            for r in data: dist[r['rating']] += 1
+        else:
+            avg  = 0
+            dist = {i: 0 for i in range(1, 6)}
+
+        return Response({
+            'reviews':     data,
+            'total':       total,
+            'average':     round(avg, 1),
+            'distribution': dist,
+        })
+
+    def post(self, request, product_id):
+        s = CreateReviewSerializer(data={**request.data, 'product_id': product_id})
+        if not s.is_valid():
+            return Response(s.errors, status=400)
+
+        d = s.validated_data
+
+        # Verify the order belongs to this user and contains the product
+        try:
+            order = Order.objects.get(id=d['order_id'])
+        except Exception:
+            return Response({'detail': 'Order not found'}, status=404)
+
+        if order.user_id != request.user.id:
+            return Response({'detail': 'Not your order'}, status=403)
+
+        if order.status != 'delivered':
+            return Response({'detail': 'Order must be delivered before rating'}, status=400)
+
+        product_ids_in_order = [item.product_id for item in order.items]
+        if product_id not in product_ids_in_order:
+            return Response({'detail': 'Product not in this order'}, status=400)
+
+        # One review per user per product per order
+        existing = Review.objects.filter(
+            product_id=product_id,
+            user_id=request.user.id,
+            order_id=d['order_id'],
+        ).first()
+        if existing:
+            return Response({'detail': 'Already reviewed this product for this order'}, status=400)
+
+        review = Review(
+            product_id = product_id,
+            user_id    = request.user.id,
+            user_name  = request.user.name,
+            order_id   = d['order_id'],
+            rating     = d['rating'],
+            body       = d.get('body', ''),
+        )
+        review.save()
+        return Response(serialize_review(review), status=201)
+
+
+class ReviewReplyView(APIView):
+    """Admin replies to a review"""
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, review_id):
+        try:
+            review = Review.objects.get(id=review_id)
+        except Exception:
+            return Response({'detail': 'Review not found'}, status=404)
+
+        body = request.data.get('body', '').strip()
+        if not body:
+            return Response({'detail': 'Reply body required'}, status=400)
+
+        review.reply = ReviewReply(
+            body       = body,
+            admin_name = request.user.name,
+        )
+        review.save()
+        return Response(serialize_review(review))
+
+
+# ── Product Updates ───────────────────────────────────────
+
+class ProductUpdatesView(APIView):
+    """GET all updates for a product (public); POST new update (admin only)"""
+
+    def get_permissions(self):
+        if self.request.method == 'GET': return [permissions.AllowAny()]
+        return [IsAdminUser()]
+
+    def get(self, request, product_id):
+        updates = ProductUpdate.objects.filter(product_id=product_id)
+        return Response([serialize_product_update(u) for u in updates])
+
+    def post(self, request, product_id):
+        s = CreateProductUpdateSerializer(data=request.data)
+        if not s.is_valid():
+            return Response(s.errors, status=400)
+        update = ProductUpdate(
+            product_id = product_id,
+            admin_name = request.user.name,
+            title      = s.validated_data['title'],
+            body       = s.validated_data['body'],
+        )
+        update.save()
+        return Response(serialize_product_update(update), status=201)
+
+
+class ProductUpdateCommentView(APIView):
+    """Any authenticated user can comment on a product update"""
+
+    def post(self, request, update_id):
+        try:
+            update = ProductUpdate.objects.get(id=update_id)
+        except Exception:
+            return Response({'detail': 'Update not found'}, status=404)
+
+        body = request.data.get('body', '').strip()
+        if not body:
+            return Response({'detail': 'Comment body required'}, status=400)
+
+        update.comments.append(UpdateComment(
+            user_id   = request.user.id,
+            user_name = request.user.name,
+            body      = body,
+        ))
+        update.save()
+        return Response(serialize_product_update(update))
 
 
 # ── Admin Dashboard ───────────────────────────────────────
