@@ -26,8 +26,6 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'role', 'created_at']
 
 
-# ── MongoDB serializers ───────────────────────────────────
-
 def serialize_product(p):
     return {
         'id':          str(p.id),
@@ -85,7 +83,11 @@ def serialize_review(r):
         'order_id':   r.order_id,
         'rating':     r.rating,
         'body':       r.body or '',
+        'image_urls': r.image_urls or [],
         'reply':      serialize_review_reply(r.reply),
+        'is_edited':  r.is_edited or False,
+        'edit_count': r.edit_count or 0,
+        'edited_at':  r.edited_at.isoformat() if r.edited_at else None,
         'created_at': r.created_at.isoformat() if r.created_at else None,
     }
 
@@ -122,6 +124,11 @@ class CreateReviewSerializer(serializers.Serializer):
     order_id   = serializers.CharField()
     rating     = serializers.IntegerField(min_value=1, max_value=5)
     body       = serializers.CharField(required=False, allow_blank=True)
+
+
+class EditReviewSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(min_value=1, max_value=5, required=False)
+    body   = serializers.CharField(required=False, allow_blank=True)
 
 
 class CreateProductUpdateSerializer(serializers.Serializer):
