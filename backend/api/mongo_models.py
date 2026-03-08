@@ -38,7 +38,7 @@ class Order(me.Document):
         'pending', 'confirmed', 'processing',
         'shipped', 'delivered', 'cancelled'
     )
-    user_id          = me.IntField(required=True)   # FK to PostgreSQL User.id
+    user_id          = me.IntField(required=True)
     user_name        = me.StringField()
     user_email       = me.StringField()
     items            = me.EmbeddedDocumentListField(OrderItem)
@@ -57,3 +57,58 @@ class Order(me.Document):
     def save(self, *args, **kwargs):
         self.updated_at = datetime.utcnow()
         return super().save(*args, **kwargs)
+
+
+# ── Review / Rating ───────────────────────────────────────
+
+class ReviewReply(me.EmbeddedDocument):
+    """Admin reply to a review"""
+    body       = me.StringField(required=True)
+    admin_name = me.StringField(default='Admin')
+    created_at = me.DateTimeField(default=datetime.utcnow)
+
+
+class Review(me.Document):
+    product_id  = me.StringField(required=True)   # ref to Product.id
+    user_id     = me.IntField(required=True)       # ref to PostgreSQL User.id
+    user_name   = me.StringField()
+    order_id    = me.StringField(required=True)    # must have bought the product
+    rating      = me.IntField(required=True, min_value=1, max_value=5)
+    body        = me.StringField(default='')
+    reply       = me.EmbeddedDocumentField(ReviewReply)
+    created_at  = me.DateTimeField(default=datetime.utcnow)
+    updated_at  = me.DateTimeField(default=datetime.utcnow)
+
+    meta = {
+        'collection': 'reviews',
+        'ordering':   ['-created_at'],
+        'indexes':    ['product_id', 'user_id', 'order_id'],
+    }
+
+    def save(self, *args, **kwargs):
+        self.updated_at = datetime.utcnow()
+        return super().save(*args, **kwargs)
+
+
+# ── Product Updates (admin posts visible to all) ──────────
+
+class UpdateComment(me.EmbeddedDocument):
+    user_id    = me.IntField(required=True)
+    user_name  = me.StringField()
+    body       = me.StringField(required=True)
+    created_at = me.DateTimeField(default=datetime.utcnow)
+
+
+class ProductUpdate(me.Document):
+    product_id = me.StringField(required=True)
+    admin_name = me.StringField(default='Admin')
+    title      = me.StringField(required=True)
+    body       = me.StringField(required=True)
+    comments   = me.EmbeddedDocumentListField(UpdateComment)
+    created_at = me.DateTimeField(default=datetime.utcnow)
+
+    meta = {
+        'collection': 'product_updates',
+        'ordering':   ['-created_at'],
+        'indexes':    ['product_id'],
+    }
