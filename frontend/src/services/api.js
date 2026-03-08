@@ -54,6 +54,7 @@ export const confirmReceived = (id) => api.patch(`/orders/${id}/`, { action: 'co
 export const getProductReviews = (productId) => api.get(`/products/${productId}/reviews/`)
 export const createReview = (productId, data) => api.post(`/products/${productId}/reviews/`, data)
 export const getMyReviews = () => api.get('/reviews/mine/')
+export const editReview = (reviewId, data) => api.patch(`/reviews/${reviewId}/`, data)
 export const replyToReview = (reviewId, body) => api.post(`/reviews/${reviewId}/reply/`, { body })
 
 // Product Updates
