@@ -21,6 +21,7 @@ urlpatterns = [
     # Reviews
     path('products/<str:product_id>/reviews/',  views.ProductReviewsView.as_view()),
     path('reviews/mine/',                       views.MyReviewsView.as_view()),
+    path('reviews/<str:review_id>/',            views.ReviewDetailView.as_view()),
     path('reviews/<str:review_id>/reply/',      views.ReviewReplyView.as_view()),
 
     # Product updates & comments
