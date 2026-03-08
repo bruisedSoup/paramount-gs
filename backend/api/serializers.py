@@ -26,7 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'role', 'created_at']
 
 
-# ── MongoDB serializers (mongoengine → plain dict) ────────
+# ── MongoDB serializers ───────────────────────────────────
 
 def serialize_product(p):
     return {
@@ -66,7 +66,64 @@ def serialize_order(o):
     }
 
 
+def serialize_review_reply(r):
+    if not r:
+        return None
+    return {
+        'body':       r.body,
+        'admin_name': r.admin_name,
+        'created_at': r.created_at.isoformat() if r.created_at else None,
+    }
+
+
+def serialize_review(r):
+    return {
+        'id':         str(r.id),
+        'product_id': r.product_id,
+        'user_id':    r.user_id,
+        'user_name':  r.user_name,
+        'order_id':   r.order_id,
+        'rating':     r.rating,
+        'body':       r.body or '',
+        'reply':      serialize_review_reply(r.reply),
+        'created_at': r.created_at.isoformat() if r.created_at else None,
+    }
+
+
+def serialize_update_comment(c):
+    return {
+        'user_id':    c.user_id,
+        'user_name':  c.user_name,
+        'body':       c.body,
+        'created_at': c.created_at.isoformat() if c.created_at else None,
+    }
+
+
+def serialize_product_update(u):
+    return {
+        'id':         str(u.id),
+        'product_id': u.product_id,
+        'admin_name': u.admin_name,
+        'title':      u.title,
+        'body':       u.body,
+        'comments':   [serialize_update_comment(c) for c in u.comments],
+        'created_at': u.created_at.isoformat() if u.created_at else None,
+    }
+
+
 class CreateOrderSerializer(serializers.Serializer):
     items            = serializers.ListField(child=serializers.DictField())
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     notes            = serializers.CharField(required=False, allow_blank=True)
+
+
+class CreateReviewSerializer(serializers.Serializer):
+    product_id = serializers.CharField()
+    order_id   = serializers.CharField()
+    rating     = serializers.IntegerField(min_value=1, max_value=5)
+    body       = serializers.CharField(required=False, allow_blank=True)
+
+
+class CreateProductUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    body  = serializers.CharField()
