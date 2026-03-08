@@ -4,11 +4,13 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from datetime import datetime
 from .models import User
 from .mongo_models import Product, Order, OrderItem, Review, ReviewReply, ProductUpdate, UpdateComment
 from .serializers import (
     RegisterSerializer, UserSerializer,
-    CreateOrderSerializer, CreateReviewSerializer, CreateProductUpdateSerializer,
+    CreateOrderSerializer, CreateReviewSerializer, EditReviewSerializer,
+    CreateProductUpdateSerializer,
     serialize_product, serialize_order, serialize_review, serialize_product_update,
 )
 import cloudinary
@@ -268,7 +270,6 @@ class OrderDetailView(APIView):
 # ── Reviews ───────────────────────────────────────────────
 
 class ProductReviewsView(APIView):
-    """GET all reviews for a product (public); POST new review (auth, multipart for images)"""
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_permissions(self):
@@ -309,7 +310,6 @@ class ProductReviewsView(APIView):
         if existing:
             return Response({'detail': 'Already reviewed'}, status=400)
 
-        # Upload up to 3 review images
         image_urls = []
         for key in ['image_0', 'image_1', 'image_2']:
             if key in request.FILES:
@@ -327,6 +327,8 @@ class ProductReviewsView(APIView):
             rating     = d['rating'],
             body       = d.get('body', ''),
             image_urls = image_urls,
+            edit_count = 0,
+            is_edited  = False,
         )
         review.save()
         return Response(serialize_review(review), status=201)
@@ -338,6 +340,50 @@ class MyReviewsView(APIView):
     def get(self, request):
         reviews = Review.objects.filter(user_id=request.user.id)
         return Response([serialize_review(r) for r in reviews])
+
+
+class ReviewDetailView(APIView):
+    """PATCH: one-time edit by owner only. No DELETE."""
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def patch(self, request, review_id):
+        try:    review = Review.objects.get(id=review_id)
+        except: return Response({'detail': 'Review not found'}, status=404)
+
+        # Ownership check
+        if review.user_id != request.user.id:
+            return Response({'detail': 'Not your review'}, status=403)
+
+        # One-edit limit
+        if review.edit_count >= 1:
+            return Response({'detail': 'Reviews can only be edited once.'}, status=400)
+
+        s = EditReviewSerializer(data=request.data)
+        if not s.is_valid():
+            return Response(s.errors, status=400)
+
+        d = s.validated_data
+        if 'rating' in d: review.rating = d['rating']
+        if 'body'   in d: review.body   = d['body']
+
+        # Handle image replacement (upload new ones if provided)
+        new_images = []
+        has_new_images = any(f'image_{i}' in request.FILES for i in range(3))
+        if has_new_images:
+            for key in ['image_0', 'image_1', 'image_2']:
+                if key in request.FILES:
+                    try:
+                        result = cloudinary.uploader.upload(request.FILES[key])
+                        new_images.append(result.get('secure_url', ''))
+                    except Exception as e:
+                        print(f"Review edit image warning: {e}")
+            review.image_urls = new_images
+
+        review.edit_count = 1
+        review.is_edited  = True
+        review.edited_at  = datetime.utcnow()
+        review.save()
+        return Response(serialize_review(review))
 
 
 class ReviewReplyView(APIView):
