@@ -75,6 +75,7 @@ class Review(me.Document):
     order_id    = me.StringField(required=True)    # must have bought the product
     rating      = me.IntField(required=True, min_value=1, max_value=5)
     body        = me.StringField(default='')
+    image_urls = me.ListField(me.StringField(), default=list)
     reply       = me.EmbeddedDocumentField(ReviewReply)
     created_at  = me.DateTimeField(default=datetime.utcnow)
     updated_at  = me.DateTimeField(default=datetime.utcnow)
