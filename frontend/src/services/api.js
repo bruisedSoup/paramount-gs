@@ -53,6 +53,7 @@ export const confirmReceived = (id) => api.patch(`/orders/${id}/`, { action: 'co
 // Reviews
 export const getProductReviews = (productId) => api.get(`/products/${productId}/reviews/`)
 export const createReview = (productId, data) => api.post(`/products/${productId}/reviews/`, data)
+export const getMyReviews = () => api.get('/reviews/mine/')
 export const replyToReview = (reviewId, body) => api.post(`/reviews/${reviewId}/reply/`, { body })
 
 // Product Updates
