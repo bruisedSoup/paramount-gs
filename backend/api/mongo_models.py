@@ -77,6 +77,9 @@ class Review(me.Document):
     body        = me.StringField(default='')
     image_urls = me.ListField(me.StringField(), default=list)
     reply       = me.EmbeddedDocumentField(ReviewReply)
+    edit_count  = me.IntField(default=0)   # max 1
+    is_edited   = me.BooleanField(default=False)
+    edited_at   = me.DateTimeField(default=None)
     created_at  = me.DateTimeField(default=datetime.utcnow)
     updated_at  = me.DateTimeField(default=datetime.utcnow)
 
