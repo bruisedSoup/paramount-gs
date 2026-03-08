@@ -16,20 +16,49 @@ export default function AdminProducts() {
     useEffect(() => { load() }, [])
 
     const openNew = () => { setEditing(null); setForm(BLANK); setShowModal(true) }
-    const openEdit = (p) => { setEditing(p); setForm({ ...p, image: null }); setShowModal(true) }
+    const openEdit = (p) => {
+        setEditing(p)
+        setForm({
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            stock: p.stock,
+            category: p.category,
+            image: null   // new upload only if user picks a file
+        })
+        setShowModal(true)
+    }
 
     const handleSave = async () => {
         setLoading(true)
         try {
             const fd = new FormData()
-            Object.entries(form).forEach(([k, v]) => { if (v !== null && v !== '') fd.append(k, v) })
-            if (editing) { await updateProduct(editing.id, fd) }
-            else { await createProduct(fd) }
+            // Explicitly append only backend-expected fields, exclude id/image_url
+            const fields = ['name', 'description', 'price', 'stock', 'category']
+            fields.forEach(k => {
+                if (form[k] !== null && form[k] !== undefined && form[k] !== '') {
+                    fd.append(k, form[k])
+                }
+            })
+            // Only append image if a new file was selected
+            if (form.image instanceof File) {
+                fd.append('image', form.image)
+            }
+
+            if (editing) {
+                await updateProduct(editing.id, fd)
+            } else {
+                await createProduct(fd)
+            }
             toast.success(editing ? 'Product updated!' : 'Product created!')
             setShowModal(false)
             load()
-        } catch { toast.error('Save failed') }
-        finally { setLoading(false) }
+        } catch (err) {
+            console.error(err.response?.data)   // ← this will show the exact backend error
+            toast.error(err.response?.data?.detail || 'Save failed')
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleDelete = async (id) => {
