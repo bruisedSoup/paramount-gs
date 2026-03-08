@@ -2,10 +2,10 @@ import mongoengine as me
 from datetime import datetime
 
 class Product(me.Document):
-    CATEGORY_CHOICES = (
+    CATEGORY_CHOICES = [
         'phones', 'laptops', 'tablets', 'accessories',
         'audio', 'cameras', 'gaming', 'other'
-    )
+    ]
     name        = me.StringField(required=True, max_length=255)
     description = me.StringField(required=True)
     price       = me.DecimalField(required=True, precision=2)
