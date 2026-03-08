@@ -102,12 +102,16 @@ class ProductListView(APIView):
     def post(self, request):
         data      = request.data
         image_url = ''
+
         if 'image' in request.FILES:
             try:
                 result    = cloudinary.uploader.upload(request.FILES['image'])
                 image_url = result.get('secure_url', '')
             except Exception as e:
-                return Response({'detail': f'Image upload failed: {str(e)}'}, status=400)
+                # Log it but don't block the save — just skip the image
+                print(f"Image upload warning: {str(e)}")
+                image_url = ''   # ← proceed without image instead of returning 400
+
         try:
             product = Product(
                 name        = data.get('name', ''),
@@ -117,10 +121,31 @@ class ProductListView(APIView):
                 category    = data.get('category', 'other'),
                 image_url   = image_url,
             )
+            product.validate()
             product.save()
             return Response(serialize_product(product), status=201)
         except Exception as e:
+            print("PRODUCT SAVE ERROR:", str(e))
             return Response({'detail': str(e)}, status=400)
+
+
+    def patch(self, request, pk):
+        p = self.get_object(pk)
+        if not p: return Response({'detail': 'Not found'}, status=404)
+        data = request.data
+        if 'name'        in data: p.name        = data['name']
+        if 'description' in data: p.description = data['description']
+        if 'price'       in data: p.price       = float(data['price'])
+        if 'stock'       in data: p.stock       = int(data['stock'])
+        if 'category'    in data: p.category    = data['category']
+        if 'image' in request.FILES:
+            try:
+                result      = cloudinary.uploader.upload(request.FILES['image'])
+                p.image_url = result.get('secure_url', '')
+            except Exception as e:
+                print(f"Image upload warning: {str(e)}")  # ← skip, don't fail
+        p.save()
+        return Response(serialize_product(p))
 
 
 class ProductDetailView(APIView):
