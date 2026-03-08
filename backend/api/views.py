@@ -1,7 +1,7 @@
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import User
@@ -82,7 +82,7 @@ class ProfileView(APIView):
         return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ── Products (MongoDB) ────────────────────────────────────
+# ── Products ──────────────────────────────────────────────
 
 class ProductListView(APIView):
     parser_classes = [MultiPartParser, FormParser]
@@ -107,8 +107,7 @@ class ProductListView(APIView):
                 result    = cloudinary.uploader.upload(request.FILES['image'])
                 image_url = result.get('secure_url', '')
             except Exception as e:
-                print(f"Image upload warning: {str(e)}")
-                image_url = ''
+                print(f"Image upload warning: {e}")
         try:
             product = Product(
                 name        = data.get('name', ''),
@@ -122,7 +121,7 @@ class ProductListView(APIView):
             product.save()
             return Response(serialize_product(product), status=201)
         except Exception as e:
-            print("PRODUCT SAVE ERROR:", str(e))
+            print("PRODUCT SAVE ERROR:", e)
             return Response({'detail': str(e)}, status=400)
 
 
@@ -134,10 +133,8 @@ class ProductDetailView(APIView):
         return [IsAdminUser()]
 
     def get_object(self, pk):
-        try:
-            return Product.objects.get(id=pk)
-        except Exception:
-            return None
+        try:    return Product.objects.get(id=pk)
+        except: return None
 
     def get(self, request, pk):
         p = self.get_object(pk)
@@ -158,7 +155,7 @@ class ProductDetailView(APIView):
                 result      = cloudinary.uploader.upload(request.FILES['image'])
                 p.image_url = result.get('secure_url', '')
             except Exception as e:
-                print(f"Image upload warning: {str(e)}")
+                print(f"Image upload warning: {e}")
         p.save()
         return Response(serialize_product(p))
 
@@ -169,7 +166,7 @@ class ProductDetailView(APIView):
         return Response(status=204)
 
 
-# ── Orders (MongoDB) ──────────────────────────────────────
+# ── Orders ────────────────────────────────────────────────
 
 class OrderListCreateView(APIView):
 
@@ -190,10 +187,8 @@ class OrderListCreateView(APIView):
         order_items = []
 
         for item in items_data:
-            try:
-                product = Product.objects.get(id=item['product_id'])
-            except Exception:
-                return Response({'detail': 'Product not found'}, status=404)
+            try:    product = Product.objects.get(id=item['product_id'])
+            except: return Response({'detail': 'Product not found'}, status=404)
 
             qty = int(item.get('quantity', 1))
             if product.stock < qty:
@@ -235,7 +230,7 @@ class OrderDetailView(APIView):
             if user.role != 'admin' and order.user_id != user.id:
                 return None
             return order
-        except Exception:
+        except:
             return None
 
     def get(self, request, pk):
@@ -244,13 +239,9 @@ class OrderDetailView(APIView):
         return Response(serialize_order(order))
 
     def patch(self, request, pk):
-        # Admin updates status; user can mark as received (delivered)
-        try:
-            order = Order.objects.get(id=pk)
-        except Exception:
-            return Response({'detail': 'Not found'}, status=404)
+        try:    order = Order.objects.get(id=pk)
+        except: return Response({'detail': 'Not found'}, status=404)
 
-        # Admin: can set any valid status
         if request.user.role == 'admin':
             new_status = request.data.get('status')
             valid = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
@@ -260,9 +251,9 @@ class OrderDetailView(APIView):
             order.save()
             return Response(serialize_order(order))
 
-        # Customer: can only confirm receipt (shipped → delivered)
         if order.user_id != request.user.id:
             return Response({'detail': 'Not found'}, status=404)
+
         action = request.data.get('action')
         if action == 'confirm_received':
             if order.status != 'shipped':
@@ -277,7 +268,8 @@ class OrderDetailView(APIView):
 # ── Reviews ───────────────────────────────────────────────
 
 class ProductReviewsView(APIView):
-    """GET all reviews for a product (public); POST a new review (auth required)"""
+    """GET all reviews for a product (public); POST new review (auth, multipart for images)"""
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_permissions(self):
         if self.request.method == 'GET': return [permissions.AllowAny()]
@@ -286,23 +278,11 @@ class ProductReviewsView(APIView):
     def get(self, request, product_id):
         reviews = Review.objects.filter(product_id=product_id)
         data    = [serialize_review(r) for r in reviews]
-
-        # Compute rating stats
-        total = len(data)
-        if total:
-            avg        = sum(r['rating'] for r in data) / total
-            dist       = {i: 0 for i in range(1, 6)}
-            for r in data: dist[r['rating']] += 1
-        else:
-            avg  = 0
-            dist = {i: 0 for i in range(1, 6)}
-
-        return Response({
-            'reviews':     data,
-            'total':       total,
-            'average':     round(avg, 1),
-            'distribution': dist,
-        })
+        total   = len(data)
+        avg     = round(sum(r['rating'] for r in data) / total, 1) if total else 0
+        dist    = {i: 0 for i in range(1, 6)}
+        for r in data: dist[r['rating']] += 1
+        return Response({'reviews': data, 'total': total, 'average': avg, 'distribution': dist})
 
     def post(self, request, product_id):
         s = CreateReviewSerializer(data={**request.data, 'product_id': product_id})
@@ -311,15 +291,11 @@ class ProductReviewsView(APIView):
 
         d = s.validated_data
 
-        # Verify the order belongs to this user and contains the product
-        try:
-            order = Order.objects.get(id=d['order_id'])
-        except Exception:
-            return Response({'detail': 'Order not found'}, status=404)
+        try:    order = Order.objects.get(id=d['order_id'])
+        except: return Response({'detail': 'Order not found'}, status=404)
 
         if order.user_id != request.user.id:
             return Response({'detail': 'Not your order'}, status=403)
-
         if order.status != 'delivered':
             return Response({'detail': 'Order must be delivered before rating'}, status=400)
 
@@ -327,14 +303,21 @@ class ProductReviewsView(APIView):
         if product_id not in product_ids_in_order:
             return Response({'detail': 'Product not in this order'}, status=400)
 
-        # One review per user per product per order
         existing = Review.objects.filter(
-            product_id=product_id,
-            user_id=request.user.id,
-            order_id=d['order_id'],
+            product_id=product_id, user_id=request.user.id, order_id=d['order_id']
         ).first()
         if existing:
-            return Response({'detail': 'Already reviewed this product for this order'}, status=400)
+            return Response({'detail': 'Already reviewed'}, status=400)
+
+        # Upload up to 3 review images
+        image_urls = []
+        for key in ['image_0', 'image_1', 'image_2']:
+            if key in request.FILES:
+                try:
+                    result = cloudinary.uploader.upload(request.FILES[key])
+                    image_urls.append(result.get('secure_url', ''))
+                except Exception as e:
+                    print(f"Review image upload warning: {e}")
 
         review = Review(
             product_id = product_id,
@@ -343,29 +326,32 @@ class ProductReviewsView(APIView):
             order_id   = d['order_id'],
             rating     = d['rating'],
             body       = d.get('body', ''),
+            image_urls = image_urls,
         )
         review.save()
         return Response(serialize_review(review), status=201)
 
 
+class MyReviewsView(APIView):
+    """Returns all reviews written by the logged-in user"""
+
+    def get(self, request):
+        reviews = Review.objects.filter(user_id=request.user.id)
+        return Response([serialize_review(r) for r in reviews])
+
+
 class ReviewReplyView(APIView):
-    """Admin replies to a review"""
     permission_classes = [IsAdminUser]
 
     def post(self, request, review_id):
-        try:
-            review = Review.objects.get(id=review_id)
-        except Exception:
-            return Response({'detail': 'Review not found'}, status=404)
+        try:    review = Review.objects.get(id=review_id)
+        except: return Response({'detail': 'Review not found'}, status=404)
 
         body = request.data.get('body', '').strip()
         if not body:
             return Response({'detail': 'Reply body required'}, status=400)
 
-        review.reply = ReviewReply(
-            body       = body,
-            admin_name = request.user.name,
-        )
+        review.reply = ReviewReply(body=body, admin_name=request.user.name)
         review.save()
         return Response(serialize_review(review))
 
@@ -373,7 +359,6 @@ class ReviewReplyView(APIView):
 # ── Product Updates ───────────────────────────────────────
 
 class ProductUpdatesView(APIView):
-    """GET all updates for a product (public); POST new update (admin only)"""
 
     def get_permissions(self):
         if self.request.method == 'GET': return [permissions.AllowAny()]
@@ -398,13 +383,10 @@ class ProductUpdatesView(APIView):
 
 
 class ProductUpdateCommentView(APIView):
-    """Any authenticated user can comment on a product update"""
 
     def post(self, request, update_id):
-        try:
-            update = ProductUpdate.objects.get(id=update_id)
-        except Exception:
-            return Response({'detail': 'Update not found'}, status=404)
+        try:    update = ProductUpdate.objects.get(id=update_id)
+        except: return Response({'detail': 'Update not found'}, status=404)
 
         body = request.data.get('body', '').strip()
         if not body:
