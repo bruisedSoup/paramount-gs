@@ -471,12 +471,36 @@ class DashboardView(APIView):
         for p in products:
             products_by_category[p.category] = products_by_category.get(p.category, 0) + 1
 
+        # Aggregate orders by category (based on items in orders)
+        orders_by_product_category = {}
+        for order in orders:
+            for item in order.items:
+                try:
+                    product = Product.objects.get(id=item.product_id)
+                    category = product.category
+                    orders_by_product_category[category] = orders_by_product_category.get(category, 0) + item.quantity
+                except:
+                    pass
+
+        # Aggregate sales by category
+        sales_by_category = {}
+        for order in orders:
+            for item in order.items:
+                try:
+                    product = Product.objects.get(id=item.product_id)
+                    category = product.category
+                    sales_by_category[category] = sales_by_category.get(category, 0) + float(item.price_at_purchase) * item.quantity
+                except:
+                    pass
+
         return Response({
-            'total_products':       products.count(),
-            'total_orders':         orders.count(),
-            'total_sales':          float(total_sales),
-            'total_customers':      User.objects.filter(role='customer').count(),
-            'recent_orders':        [serialize_order(o) for o in recent_orders],
-            'orders_by_status':     orders_by_status,
-            'products_by_category': products_by_category,
+            'total_products':           products.count(),
+            'total_orders':             orders.count(),
+            'total_sales':              float(total_sales),
+            'total_customers':          User.objects.filter(role='customer').count(),
+            'recent_orders':            [serialize_order(o) for o in recent_orders],
+            'orders_by_status':         orders_by_status,
+            'products_by_category':     products_by_category,
+            'orders_by_product_category': orders_by_product_category,
+            'sales_by_category':        {k: float(v) for k, v in sales_by_category.items()},
         })
