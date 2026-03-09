@@ -59,8 +59,9 @@ export function AuthProvider({ children }) {
 
     // Don't render anything until we know if the user is logged in or not
     if (loading) return (
-        <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: '#64748b' }}>Loading...</p>
+        <div style={{ minHeight: '100vh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '36px', height: '36px', border: '3px solid #d2d2d7', borderTop: '3px solid #0066cc', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
     )
 

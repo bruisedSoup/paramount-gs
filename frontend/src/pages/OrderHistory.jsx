@@ -22,7 +22,7 @@ function StarPicker({ value, onChange }) {
             {[1, 2, 3, 4, 5].map(n => (
                 <Star key={n} size={32}
                     fill={(hovered || value) >= n ? '#f59e0b' : 'none'}
-                    color={(hovered || value) >= n ? '#f59e0b' : '#334155'}
+                    color={(hovered || value) >= n ? '#f59e0b' : '#d2d2d7'}
                     style={{ cursor: 'pointer', transition: 'all 0.1s', filter: (hovered || value) >= n ? 'drop-shadow(0 0 6px #f59e0b88)' : 'none' }}
                     onMouseEnter={() => setHovered(n)}
                     onMouseLeave={() => setHovered(0)}
@@ -37,7 +37,7 @@ function StarDisplay({ value, size = 14 }) {
     return (
         <div style={{ display: 'flex', gap: '2px' }}>
             {[1, 2, 3, 4, 5].map(n => (
-                <Star key={n} size={size} fill={value >= n ? '#f59e0b' : 'none'} color={value >= n ? '#f59e0b' : '#334155'} />
+                <Star key={n} size={size} fill={value >= n ? '#f59e0b' : 'none'} color={value >= n ? '#f59e0b' : '#d2d2d7'} />
             ))}
         </div>
     )
@@ -88,21 +88,21 @@ function RateModal({ order, item, onClose, onDone }) {
     }
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-            <div style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+            <div style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                     <div>
-                        <h2 style={{ color: '#fff', fontWeight: '800', fontSize: '20px', marginBottom: '4px' }}>Rate Product</h2>
-                        <p style={{ color: '#64748b', fontSize: '13px' }}>{item.product_name}</p>
+                        <h2 style={{ color: '#111', fontWeight: '800', fontSize: '20px', marginBottom: '4px' }}>Rate Product</h2>
+                        <p style={{ color: '#6e6e73', fontSize: '13px' }}>{item.product_name}</p>
                     </div>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer' }}><X size={20} /></button>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8f8f94', cursor: 'pointer' }}><X size={20} /></button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '14px', alignItems: 'center', background: '#0d0d14', borderRadius: '10px', padding: '14px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'center', background: '#f5f5f7', borderRadius: '10px', padding: '14px', marginBottom: '20px', border: '1px solid #e8e8ed' }}>
                     <img src={item.product_image || 'https://via.placeholder.com/56'} alt={item.product_name}
-                        style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
+                        style={{ width: '56px', height: '56px', objectFit: 'contain', borderRadius: '8px', flexShrink: 0 }} />
                     <div>
-                        <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '8px' }}>How would you rate this?</p>
+                        <p style={{ color: '#6e6e73', fontSize: '12px', marginBottom: '8px' }}>How would you rate this?</p>
                         <StarPicker value={rating} onChange={setRating} />
                         {rating > 0 && (
                             <p style={{ color: '#f59e0b', fontSize: '12px', marginTop: '4px', fontWeight: '700' }}>
@@ -115,18 +115,18 @@ function RateModal({ order, item, onClose, onDone }) {
                 <textarea value={body} onChange={e => setBody(e.target.value)}
                     placeholder="Share your experience (optional)..."
                     rows={4}
-                    style={{ width: '100%', background: '#0d0d14', border: '1px solid #1e1e2e', borderRadius: '8px', padding: '12px', color: '#e2e8f0', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px', lineHeight: '1.6' }}
+                    style={{ width: '100%', background: '#fff', border: '1px solid #d2d2d7', borderRadius: '8px', padding: '12px', color: '#111', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px', lineHeight: '1.6', fontFamily: 'inherit' }}
                 />
 
                 {/* Image upload */}
                 <div style={{ marginBottom: '20px' }}>
-                    <p style={{ color: '#64748b', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                    <p style={{ color: '#8f8f94', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
                         Add Photos ({images.length}/3)
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         {previews.map((src, idx) => (
                             <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
-                                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e1e2e' }} />
+                                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '1px solid #d2d2d7' }} />
                                 <button onClick={() => removeImage(idx)}
                                     style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                                     <X size={11} />
@@ -135,7 +135,7 @@ function RateModal({ order, item, onClose, onDone }) {
                         ))}
                         {images.length < 3 && (
                             <button onClick={() => fileRef.current?.click()}
-                                style={{ width: '80px', height: '80px', background: '#0d0d14', border: '2px dashed #1e1e2e', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#475569' }}>
+                                style={{ width: '80px', height: '80px', background: '#f5f5f7', border: '2px dashed #d2d2d7', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#8f8f94' }}>
                                 <ImagePlus size={20} />
                                 <span style={{ fontSize: '11px' }}>Add</span>
                             </button>
@@ -146,11 +146,11 @@ function RateModal({ order, item, onClose, onDone }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={onClose} style={{ flex: 1, background: '#1e1e2e', color: '#94a3b8', border: 'none', borderRadius: '8px', padding: '12px', cursor: 'pointer', fontWeight: '700' }}>
+                    <button onClick={onClose} style={{ flex: 1, background: '#f5f5f7', color: '#6e6e73', border: '1px solid #d2d2d7', borderRadius: '8px', padding: '12px', cursor: 'pointer', fontWeight: '700' }}>
                         Cancel
                     </button>
                     <button onClick={submit} disabled={loading || !rating}
-                        style={{ flex: 2, background: rating ? '#f59e0b' : '#1e1e2e', color: rating ? '#000' : '#475569', border: 'none', borderRadius: '8px', padding: '12px', cursor: rating ? 'pointer' : 'not-allowed', fontWeight: '800', transition: 'all 0.2s' }}>
+                        style={{ flex: 2, background: rating ? '#f59e0b' : '#e8e8ed', color: rating ? '#000' : '#8f8f94', border: 'none', borderRadius: '8px', padding: '12px', cursor: rating ? 'pointer' : 'not-allowed', fontWeight: '800', transition: 'all 0.2s' }}>
                         {loading ? 'Submitting...' : 'Submit Review'}
                     </button>
                 </div>
@@ -161,24 +161,24 @@ function RateModal({ order, item, onClose, onDone }) {
 
 function MyReviewCard({ review }) {
     return (
-        <div style={{ background: '#0d0d14', border: '1px solid #1e1e2e', borderRadius: '10px', padding: '14px', marginTop: '10px' }}>
+        <div style={{ background: '#f5f5f7', border: '1px solid #e8e8ed', borderRadius: '10px', padding: '14px', marginTop: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <StarDisplay value={review.rating} size={14} />
-                <span style={{ color: '#334155', fontSize: '11px' }}>{new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                <span style={{ color: '#8f8f94', fontSize: '11px' }}>{new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
-            {review.body && <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: '1.6', marginBottom: review.image_urls?.length ? '10px' : 0 }}>{review.body}</p>}
+            {review.body && <p style={{ color: '#6e6e73', fontSize: '13px', lineHeight: '1.6', marginBottom: review.image_urls?.length ? '10px' : 0 }}>{review.body}</p>}
             {review.image_urls?.length > 0 && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: review.reply ? '10px' : 0 }}>
                     {review.image_urls.map((url, i) => (
-                        <img key={i} src={url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #1e1e2e', cursor: 'pointer' }}
+                        <img key={i} src={url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #d2d2d7', cursor: 'pointer' }}
                             onClick={() => window.open(url, '_blank')} />
                     ))}
                 </div>
             )}
             {review.reply && (
-                <div style={{ background: '#111118', borderRadius: '8px', padding: '10px', borderLeft: '3px solid #00e5ff', marginTop: '8px' }}>
-                    <p style={{ color: '#00e5ff', fontSize: '11px', fontWeight: '700', marginBottom: '3px' }}>⚡ {review.reply.admin_name} · Admin Reply</p>
-                    <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: '1.5' }}>{review.reply.body}</p>
+                <div style={{ background: 'rgba(0,102,204,0.04)', borderRadius: '8px', padding: '10px', borderLeft: '3px solid #0066cc', marginTop: '8px', border: '1px solid rgba(0,102,204,0.12)' }}>
+                    <p style={{ color: '#0066cc', fontSize: '11px', fontWeight: '700', marginBottom: '3px' }}>⚡ {review.reply.admin_name} · Admin Reply</p>
+                    <p style={{ color: '#6e6e73', fontSize: '13px', lineHeight: '1.5' }}>{review.reply.body}</p>
                 </div>
             )}
         </div>
@@ -205,19 +205,19 @@ function OrderCard({ order, myReviews, showReceiveBtn, showRateBtn, onReceived, 
     myReviews.forEach(r => { if (r.order_id === order.id) reviewMap[r.product_id] = r })
 
     return (
-        <div style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
+        <div style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: '14px', overflow: 'hidden', marginBottom: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
             <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                    <p style={{ color: '#475569', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                    <p style={{ color: '#8f8f94', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                         Order #{order.id.slice(-8).toUpperCase()}
                     </p>
-                    <p style={{ color: '#fff', fontWeight: '600' }}>{order.items.length} item{order.items.length > 1 ? 's' : ''}</p>
-                    <p style={{ color: '#475569', fontSize: '12px', marginTop: '2px' }}>
+                    <p style={{ color: '#111', fontWeight: '600' }}>{order.items.length} item{order.items.length > 1 ? 's' : ''}</p>
+                    <p style={{ color: '#8f8f94', fontSize: '12px', marginTop: '2px' }}>
                         {new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                    <p style={{ color: '#00e5ff', fontWeight: '800', fontSize: '20px' }}>₱{parseFloat(order.total_price).toLocaleString()}</p>
+                    <p style={{ color: '#111', fontWeight: '800', fontSize: '20px' }}>₱{parseFloat(order.total_price).toLocaleString()}</p>
                     <span style={{
                         background: `${STATUS_COLORS[order.status]}15`,
                         color: STATUS_COLORS[order.status],
@@ -230,17 +230,17 @@ function OrderCard({ order, myReviews, showReceiveBtn, showRateBtn, onReceived, 
             </div>
 
             {/* Items */}
-            <div style={{ padding: '0 20px 16px', borderTop: '1px solid #1a1a24' }}>
+            <div style={{ padding: '0 20px 16px', borderTop: '1px solid #e8e8ed' }}>
                 {order.items.map((item, idx) => {
                     const myReview = reviewMap[item.product_id]
                     return (
                         <div key={idx} style={{ paddingTop: '14px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#0d0d14', borderRadius: '8px', padding: '10px 12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f5f5f7', borderRadius: '8px', padding: '10px 12px', border: '1px solid #e8e8ed' }}>
                                 <img src={item.product_image || 'https://via.placeholder.com/40'} alt={item.product_name}
-                                    style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
+                                    style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.product_name}</p>
-                                    <p style={{ color: '#475569', fontSize: '12px' }}>x{item.quantity} · ₱{parseFloat(item.price_at_purchase).toLocaleString()}</p>
+                                    <p style={{ color: '#111', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.product_name}</p>
+                                    <p style={{ color: '#8f8f94', fontSize: '12px' }}>x{item.quantity} · ₱{parseFloat(item.price_at_purchase).toLocaleString()}</p>
                                 </div>
                                 <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                                     {myReview ? (
@@ -263,9 +263,9 @@ function OrderCard({ order, myReviews, showReceiveBtn, showRateBtn, onReceived, 
             </div>
 
             {/* Footer actions */}
-            <div style={{ borderTop: '1px solid #1a1a24', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ borderTop: '1px solid #e8e8ed', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <button onClick={() => setExpanded(e => !e)}
-                    style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    style={{ background: 'none', border: 'none', color: '#8f8f94', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     {expanded ? 'Hide details' : 'View details'}
                 </button>
@@ -279,17 +279,17 @@ function OrderCard({ order, myReviews, showReceiveBtn, showRateBtn, onReceived, 
             </div>
 
             {expanded && (
-                <div style={{ padding: '14px 20px 18px', borderTop: '1px solid #1a1a24', background: '#0d0d14' }}>
+                <div style={{ padding: '14px 20px 18px', borderTop: '1px solid #e8e8ed', background: '#f5f5f7' }}>
                     {order.shipping_address && (
                         <div style={{ marginBottom: '8px' }}>
-                            <p style={{ color: '#475569', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>Ship To</p>
-                            <p style={{ color: '#94a3b8', fontSize: '13px' }}>{order.shipping_address}</p>
+                            <p style={{ color: '#8f8f94', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>Ship To</p>
+                            <p style={{ color: '#6e6e73', fontSize: '13px' }}>{order.shipping_address}</p>
                         </div>
                     )}
                     {order.notes && (
                         <div>
-                            <p style={{ color: '#475569', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>Notes</p>
-                            <p style={{ color: '#94a3b8', fontSize: '13px' }}>{order.notes}</p>
+                            <p style={{ color: '#8f8f94', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>Notes</p>
+                            <p style={{ color: '#6e6e73', fontSize: '13px' }}>{order.notes}</p>
                         </div>
                     )}
                 </div>
@@ -325,80 +325,84 @@ export default function OrderHistory() {
     }
 
     if (loading) return (
-        <div style={{ textAlign: 'center', padding: '6rem', color: '#64748b' }}>
-            <div style={{ width: '36px', height: '36px', border: '3px solid #1e1e2e', borderTop: '3px solid #00e5ff', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 1s linear infinite' }} />
+        <div style={{ textAlign: 'center', padding: '6rem', color: '#6e6e73', backgroundColor: '#f5f5f7', minHeight: '100vh' }}>
+            <div style={{ width: '36px', height: '36px', border: '3px solid #d2d2d7', borderTop: '3px solid #0066cc', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 1s linear infinite' }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
             Loading your orders...
         </div>
     )
 
     return (
-        <div style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem' }}>
-            <h1 style={{ color: '#fff', fontSize: '26px', fontWeight: '800', marginBottom: '24px' }}>My Orders</h1>
+        <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', paddingBottom: '60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+            <div style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem' }}>
+                <h1 style={{ color: '#111', fontSize: '32px', fontWeight: '800', marginBottom: '24px', letterSpacing: '-0.02em' }}>My Orders</h1>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: '#0d0d14', borderRadius: '10px', padding: '4px', border: '1px solid #1e1e2e' }}>
-                {TABS.map(tab => {
-                    const Icon = tab.icon
-                    const count = filtered[tab.key].length
-                    const active = activeTab === tab.key
-                    return (
-                        <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                            style={{
-                                flex: 1, background: active ? '#111118' : 'transparent',
-                                color: active ? '#fff' : '#475569',
-                                border: active ? '1px solid #1e1e2e' : '1px solid transparent',
-                                borderRadius: '7px', padding: '8px 4px', cursor: 'pointer',
-                                fontWeight: active ? '700' : '500', fontSize: '12px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                gap: '5px', transition: 'all 0.15s',
-                            }}>
-                            <Icon size={13} color={active ? tab.color : '#475569'} />
-                            {tab.label}
-                            {count > 0 && (
-                                <span style={{ background: active ? tab.color : '#1e1e2e', color: active ? '#000' : '#64748b', borderRadius: '10px', padding: '1px 6px', fontSize: '11px', fontWeight: '700' }}>
-                                    {count}
-                                </span>
-                            )}
-                        </button>
-                    )
-                })}
-            </div>
-
-            {/* Empty state */}
-            {filtered[activeTab].length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#475569' }}>
-                    <p style={{ fontSize: '42px', marginBottom: '12px' }}>
-                        {activeTab === 'to_ship' ? '📦' : activeTab === 'to_receive' ? '🚚' : activeTab === 'to_rate' ? '⭐' : '🛒'}
-                    </p>
-                    <p style={{ color: '#94a3b8', fontSize: '17px', fontWeight: '600', marginBottom: '6px' }}>
-                        {activeTab === 'to_ship' ? 'No orders being prepared' :
-                            activeTab === 'to_receive' ? 'No orders on the way' :
-                                activeTab === 'to_rate' ? 'Nothing to rate yet' : 'No orders yet'}
-                    </p>
-                    <p style={{ fontSize: '13px' }}>
-                        {activeTab === 'to_rate' ? 'Mark orders as received to start rating' : 'Orders will appear here once placed'}
-                    </p>
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: '#e8e8ed', borderRadius: '12px', padding: '4px', border: '1px solid #d2d2d7' }}>
+                    {TABS.map(tab => {
+                        const Icon = tab.icon
+                        const count = filtered[tab.key].length
+                        const active = activeTab === tab.key
+                        return (
+                            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                                style={{
+                                    flex: 1, background: active ? '#fff' : 'transparent',
+                                    color: active ? '#111' : '#8f8f94',
+                                    border: active ? '1px solid #d2d2d7' : '1px solid transparent',
+                                    borderRadius: '8px', padding: '8px 4px', cursor: 'pointer',
+                                    fontWeight: active ? '700' : '500', fontSize: '12px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    gap: '5px', transition: 'all 0.15s',
+                                    boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                                    fontFamily: 'inherit',
+                                }}>
+                                <Icon size={13} color={active ? tab.color : '#8f8f94'} />
+                                {tab.label}
+                                {count > 0 && (
+                                    <span style={{ background: active ? tab.color : '#d2d2d7', color: active ? '#000' : '#6e6e73', borderRadius: '10px', padding: '1px 6px', fontSize: '11px', fontWeight: '700' }}>
+                                        {count}
+                                    </span>
+                                )}
+                            </button>
+                        )
+                    })}
                 </div>
-            ) : (
-                filtered[activeTab].map(order => (
-                    <OrderCard key={order.id} order={order} myReviews={myReviews}
-                        showReceiveBtn={order.status === 'shipped'}
-                        showRateBtn={activeTab === 'to_rate'}
-                        onReceived={load}
-                        onRate={(o, item) => setRateModal({ order: o, item })}
-                    />
-                ))
-            )}
 
-            {rateModal && (
-                <RateModal
-                    order={rateModal.order}
-                    item={rateModal.item}
-                    onClose={() => setRateModal(null)}
-                    onDone={load}
-                />
-            )}
+                {/* Empty state */}
+                {filtered[activeTab].length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#8f8f94' }}>
+                        <p style={{ fontSize: '42px', marginBottom: '12px' }}>
+                            {activeTab === 'to_ship' ? '📦' : activeTab === 'to_receive' ? '🚚' : activeTab === 'to_rate' ? '⭐' : '🛒'}
+                        </p>
+                        <p style={{ color: '#111', fontSize: '17px', fontWeight: '600', marginBottom: '6px' }}>
+                            {activeTab === 'to_ship' ? 'No orders being prepared' :
+                                activeTab === 'to_receive' ? 'No orders on the way' :
+                                    activeTab === 'to_rate' ? 'Nothing to rate yet' : 'No orders yet'}
+                        </p>
+                        <p style={{ fontSize: '13px', color: '#8f8f94' }}>
+                            {activeTab === 'to_rate' ? 'Mark orders as received to start rating' : 'Orders will appear here once placed'}
+                        </p>
+                    </div>
+                ) : (
+                    filtered[activeTab].map(order => (
+                        <OrderCard key={order.id} order={order} myReviews={myReviews}
+                            showReceiveBtn={order.status === 'shipped'}
+                            showRateBtn={activeTab === 'to_rate'}
+                            onReceived={load}
+                            onRate={(o, item) => setRateModal({ order: o, item })}
+                        />
+                    ))
+                )}
+
+                {rateModal && (
+                    <RateModal
+                        order={rateModal.order}
+                        item={rateModal.item}
+                        onClose={() => setRateModal(null)}
+                        onDone={load}
+                    />
+                )}
+            </div>
         </div>
     )
 }
