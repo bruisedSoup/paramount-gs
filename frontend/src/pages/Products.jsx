@@ -1,96 +1,235 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useCart } from '../context/CartContext'
-import { useAuth } from '../context/AuthContext'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getProducts } from '../services/api'
-import toast from 'react-hot-toast'
-import { ShoppingCart, Search } from 'lucide-react'
-import AuthPromptModal from '../components/modals/AuthPromptModal'
+import CategoryMenu from '../components/CategoryMenu'
+import ProductGridCard from '../components/ProductGridCard'
+
+import accessoriesCardBg from '../assets/accessories-card.jpg'
+import musicCardBg from '../assets/music-card.jpg'
 
 const CATEGORIES = ['All', 'phones', 'laptops', 'tablets', 'accessories', 'audio', 'cameras', 'gaming']
 
+// Banner card for the first slot in each section
+function BannerCard({ title, subtitle, imageSrc }) {
+    return (
+        <div style={{
+            background: '#1d1d1f',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '20px 20px 0 20px',
+            height: '100%',
+            position: 'relative',
+        }}>
+            <div style={{ textAlign: 'left', zIndex: 1 }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px', color: '#fff', lineHeight: '1.2' }}>
+                    {title}
+                </h3>
+                <p style={{ fontSize: '12px', color: '#ababab', lineHeight: '1.4' }}>
+                    {subtitle}
+                </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', marginTop: '12px' }}>
+                <img
+                    src={imageSrc}
+                    alt={title}
+                    style={{ width: '100%', maxHeight: '160px', objectFit: 'cover' }}
+                />
+            </div>
+        </div>
+    )
+}
+
 export default function Products() {
+    const [searchParams, setSearchParams] = useSearchParams()
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
-    const [search, setSearch] = useState('')
-    const [category, setCategory] = useState('All')
-    const [showAuthModal, setShowAuthModal] = useState(false)
-    const { addToCart } = useCart()
-    const { user } = useAuth()
+
+    const category = searchParams.get('category') || 'All'
 
     useEffect(() => {
         const params = {}
-        if (search) params.search = search
         if (category !== 'All') params.category = category
         setLoading(true)
         getProducts(params)
             .then(r => setProducts(r.data.results || r.data))
             .finally(() => setLoading(false))
-    }, [search, category])
+    }, [category])
 
-    const handleAddToCart = (e, product) => {
-        e.preventDefault()
-        e.stopPropagation()
-        if (!user) { setShowAuthModal(true); return }
-        addToCart(product)
-        toast.success('Added to cart')
+    const handleCategorySelect = (cat) => {
+        setSearchParams({ category: cat })
     }
 
+    // Latest 7 overall
+    const latestProducts = [...products]
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .slice(0, 7)
+
+    // Latest 5 accessories (to fill remaining 5 of 6 slots after banner)
+    const latestAccessories = [...products]
+        .filter(p => (p.category || '').toLowerCase() === 'accessories')
+        .slice(0, 5)
+
+    // Latest 5 audio
+    const latestAudio = [...products]
+        .filter(p => (p.category || '').toLowerCase() === 'audio')
+        .slice(0, 5)
+
+    const gridStyle = {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '12px',
+    }
+
+    const cardHeight = '280px'
+
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-            {/* Search + filters */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-                <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                    <input value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder="Search products..."
-                        style={{ width: '100%', background: '#111118', border: '1px solid #1e1e2e', borderRadius: '8px', padding: '10px 14px 10px 38px', color: '#e2e8f0', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {CATEGORIES.map(cat => (
-                        <button key={cat} onClick={() => setCategory(cat)}
-                            style={{ background: category === cat ? '#00e5ff' : '#111118', color: category === cat ? '#000' : '#94a3b8', border: '1px solid #1e1e2e', borderRadius: '6px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
-                            {cat}
-                        </button>
-                    ))}
-                </div>
-            </div>
+        <div style={{
+            backgroundColor: '#f5f5f7',
+            minHeight: '100vh',
+            paddingBottom: '80px',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        }}>
+            <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '0 2rem' }}>
 
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
-                    <div style={{ width: '36px', height: '36px', border: '3px solid #1e1e2e', borderTop: '3px solid #00e5ff', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 1s linear infinite' }} />
-                    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-                </div>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                    {products.map(p => (
-                        <div key={p.id} style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: '12px', overflow: 'hidden' }}>
-                            <Link to={`/products/${p.id}`}>
-                                <img src={p.image_url || 'https://via.placeholder.com/300x200?text=No+Image'}
-                                    alt={p.name} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
-                            </Link>
-                            <div style={{ padding: '16px' }}>
-                                <p style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>{p.category}</p>
-                                <Link to={`/products/${p.id}`} style={{ color: '#fff', fontWeight: '700', textDecoration: 'none', fontSize: '16px', display: 'block', marginBottom: '8px' }}>{p.name}</Link>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ color: '#00e5ff', fontWeight: '800', fontSize: '18px' }}>₱{parseFloat(p.price).toLocaleString()}</span>
-                                    <button
-                                        onClick={e => handleAddToCart(e, p)}
-                                        disabled={p.stock === 0}
-                                        style={{ background: p.stock > 0 ? '#00e5ff' : '#1e1e2e', color: p.stock > 0 ? '#000' : '#64748b', border: 'none', borderRadius: '6px', padding: '8px 12px', cursor: p.stock > 0 ? 'pointer' : 'not-allowed' }}>
-                                        <ShoppingCart size={16} />
-                                    </button>
+                {/* Header Section */}
+                {category === 'All' ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '60px 0 40px', flexWrap: 'wrap', gap: '20px' }}>
+                        <h1 style={{ fontSize: '56px', fontWeight: '700', margin: 0, color: '#111', letterSpacing: '-0.02em' }}>Store</h1>
+                        <h2 style={{ fontSize: '28px', fontWeight: '600', color: '#111', margin: 0, textAlign: 'right', lineHeight: '1.2', maxWidth: '360px', letterSpacing: '-0.01em' }}>
+                            The best way to buy the<br />products you love.
+                        </h2>
+                    </div>
+                ) : (
+                    <div style={{ paddingTop: '60px', paddingBottom: '20px' }}>
+                        <h1 style={{ fontSize: '56px', fontWeight: '700', margin: 0, color: '#111', letterSpacing: '-0.02em', textTransform: 'capitalize' }}>
+                            {category}
+                        </h1>
+                    </div>
+                )}
+
+                {/* Category Menu */}
+                <CategoryMenu categories={CATEGORIES} selectedCategory={category} onSelect={handleCategorySelect} />
+
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '6rem' }}>
+                        <div style={{ width: '40px', height: '40px', border: '4px solid #d2d2d7', borderTop: '4px solid #0066cc', borderRadius: '50%', margin: '0 auto', animation: 'spin 1s linear infinite' }} />
+                        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                    </div>
+                ) : (
+                    <>
+                        {category === 'All' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+
+                                {/* The Latest */}
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+                                        <h2 style={{ fontSize: '21px', margin: 0, fontWeight: '700', color: '#111' }}>
+                                            The latest. <span style={{ color: '#6e6e73', fontWeight: '600' }}>Take a look what's new!</span>
+                                        </h2>
+                                        <Link
+                                            to="/?category=all"
+                                            onClick={() => handleCategorySelect('All')}
+                                            style={{ color: '#1d1d1f', textDecoration: 'none', fontSize: '14px', fontWeight: '500' }}
+                                        >
+                                            View All
+                                        </Link>
+                                    </div>
+                                    <div style={gridStyle}>
+                                        {latestProducts.map(p => (
+                                            <div key={p.id} style={{ height: cardHeight }}>
+                                                <ProductGridCard product={p} />
+                                            </div>
+                                        ))}
+                                        {/* Fill empty slots */}
+                                        {Array.from({ length: Math.max(0, 4 - (latestProducts.length % 4 || 4)) }).map((_, i) => (
+                                            <div key={`empty-l-${i}`} style={{ height: cardHeight, background: '#fff', borderRadius: '16px', opacity: 0.4 }} />
+                                        ))}
+                                    </div>
                                 </div>
-                                <p style={{ color: p.stock > 0 ? '#10b981' : '#ef4444', fontSize: '12px', marginTop: '6px' }}>
-                                    {p.stock > 0 ? `${p.stock} in stock` : 'Out of stock'}
-                                </p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
 
-            {showAuthModal && <AuthPromptModal onClose={() => setShowAuthModal(false)} />}
+                                {/* Accessories */}
+                                {latestAccessories.length > 0 && (
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+                                            <h2 style={{ fontSize: '21px', margin: 0, fontWeight: '700', color: '#111' }}>
+                                                Accessories. <span style={{ color: '#6e6e73', fontWeight: '600' }}>Essentials that pair perfectly with your favorite devices.</span>
+                                            </h2>
+                                            <Link
+                                                to="/?category=accessories"
+                                                onClick={() => handleCategorySelect('accessories')}
+                                                style={{ color: '#1d1d1f', textDecoration: 'none', fontSize: '14px', fontWeight: '500' }}
+                                            >
+                                                View All
+                                            </Link>
+                                        </div>
+                                        <div style={gridStyle}>
+                                            <div style={{ height: cardHeight }}>
+                                                <BannerCard
+                                                    title="Here and wow."
+                                                    subtitle={"The accessories you love.\nIn a fresh mix of colours."}
+                                                    imageSrc={accessoriesCardBg}
+                                                />
+                                            </div>
+                                            {latestAccessories.map(p => (
+                                                <div key={p.id} style={{ height: cardHeight }}>
+                                                    <ProductGridCard product={p} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Audio */}
+                                {latestAudio.length > 0 && (
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+                                            <h2 style={{ fontSize: '21px', margin: 0, fontWeight: '700', color: '#111' }}>
+                                                Loud and clear. <span style={{ color: '#6e6e73', fontWeight: '600' }}>Unparalleled choices for rich, high-quality sound.</span>
+                                            </h2>
+                                            <Link
+                                                to="/?category=audio"
+                                                onClick={() => handleCategorySelect('audio')}
+                                                style={{ color: '#1d1d1f', textDecoration: 'none', fontSize: '14px', fontWeight: '500' }}
+                                            >
+                                                View All
+                                            </Link>
+                                        </div>
+                                        <div style={gridStyle}>
+                                            <div style={{ height: cardHeight }}>
+                                                <BannerCard
+                                                    title="Silence, redefined."
+                                                    subtitle={"Immerse yourself in the\nmusic you love."}
+                                                    imageSrc={musicCardBg}
+                                                />
+                                            </div>
+                                            {latestAudio.map(p => (
+                                                <div key={p.id} style={{ height: cardHeight }}>
+                                                    <ProductGridCard product={p} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                            </div>
+                        ) : (
+                            <div style={{ marginTop: '40px' }}>
+                                <h2 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '32px', color: '#111' }}>Explore the lineup.</h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                                    {products.map(p => (
+                                        <div key={p.id} style={{ height: cardHeight }}>
+                                            <ProductGridCard product={p} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
         </div>
     )
 }
