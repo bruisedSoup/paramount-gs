@@ -1,19 +1,30 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
+import toast from 'react-hot-toast'
 
 export default function ProductGridCard({ product }) {
     const navigate = useNavigate()
     const { user } = useAuth()
+    const { addToCart } = useCart()
 
-    const handleAction = (e) => {
+    const handleAdminEdit = (e) => {
         e.preventDefault()
         e.stopPropagation()
-        if (user?.role === 'admin') {
-            navigate(`/admin/products/${product.id}`)
-        } else {
-            navigate(`/products/${product.id}`)
+        navigate(`/admin/products/${product.id}`)
+    }
+
+    const handleCustomerBuy = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!user) {
+            toast.error('Please sign in to purchase')
+            navigate('/login')
+            return
         }
+        addToCart(product, 1)
+        toast.success('Added to cart!')
     }
 
     return (
@@ -64,7 +75,7 @@ export default function ProductGridCard({ product }) {
                 </p>
                 {user?.role === 'admin' ? (
                     <button
-                        onClick={handleAction}
+                        onClick={handleAdminEdit}
                         style={{
                             background: 'none',
                             color: '#f59e0b',
@@ -82,7 +93,7 @@ export default function ProductGridCard({ product }) {
                     </button>
                 ) : (
                     <button
-                        onClick={handleAction}
+                        onClick={handleCustomerBuy}
                         disabled={product.stock === 0}
                         style={{
                             background: 'none',
