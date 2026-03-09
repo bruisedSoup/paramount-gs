@@ -1,13 +1,19 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function ProductGridCard({ product }) {
     const navigate = useNavigate()
+    const { user } = useAuth()
 
-    const handleBuy = (e) => {
+    const handleAction = (e) => {
         e.preventDefault()
         e.stopPropagation()
-        navigate(`/products/${product.id}`)
+        if (user?.role === 'admin') {
+            navigate(`/admin/products/${product.id}`)
+        } else {
+            navigate(`/products/${product.id}`)
+        }
     }
 
     return (
@@ -56,24 +62,44 @@ export default function ProductGridCard({ product }) {
                 <p style={{ fontSize: '13px', fontWeight: '600', color: '#111', marginBottom: '8px' }}>
                     From ₱{parseFloat(product.price).toLocaleString()}
                 </p>
-                <button
-                    onClick={handleBuy}
-                    disabled={product.stock === 0}
-                    style={{
-                        background: 'none',
-                        color: product.stock > 0 ? '#0066cc' : '#999',
-                        border: 'none',
-                        fontSize: '13px',
-                        cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
-                        padding: 0,
-                        fontWeight: '500',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                    }}
-                >
-                    {product.stock > 0 ? 'Buy ›' : 'Sold Out'}
-                </button>
+                {user?.role === 'admin' ? (
+                    <button
+                        onClick={handleAction}
+                        style={{
+                            background: 'none',
+                            color: '#f59e0b',
+                            border: 'none',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            padding: 0,
+                            fontWeight: '600',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                        }}
+                    >
+                        Edit ›
+                    </button>
+                ) : (
+                    <button
+                        onClick={handleAction}
+                        disabled={product.stock === 0}
+                        style={{
+                            background: 'none',
+                            color: product.stock > 0 ? '#0066cc' : '#999',
+                            border: 'none',
+                            fontSize: '13px',
+                            cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
+                            padding: 0,
+                            fontWeight: '500',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                        }}
+                    >
+                        {product.stock > 0 ? 'Buy ›' : 'Sold Out'}
+                    </button>
+                )}
             </div>
 
             {/* Image — bottom, no padding below */}
