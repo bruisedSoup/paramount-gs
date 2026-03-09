@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import toast from 'react-hot-toast'
-import { Search, ShoppingBag } from 'lucide-react'
+import { Search, ShoppingBag, Package, Heart, User, LogOut, Settings } from 'lucide-react'
 
 export default function Navbar() {
     const { user, logoutUser } = useAuth()
-    const { count } = useCart()
+    const { count, cart } = useCart()
     const navigate = useNavigate()
     const [bagOpen, setBagOpen] = useState(false)
     const bagRef = useRef(null)
@@ -89,82 +89,92 @@ export default function Navbar() {
                         <Search size={14} style={{ opacity: 0.8 }} />
                     </Link>
 
-                    <div ref={bagRef}>
-                        <button
-                            style={{ ...link, background: 'none', border: 'none', cursor: 'pointer', position: 'relative', padding: 0 }}
-                            onClick={() => setBagOpen(!bagOpen)}
-                        >
-                            <ShoppingBag size={14} style={{ opacity: 0.8 }} />
-                            {count > 0 && (
-                                <span style={{
-                                    position: 'absolute', top: '-6px', right: '-8px', background: '#0066cc', color: '#fff',
-                                    borderRadius: '50%', minWidth: '14px', height: '14px', fontSize: '9px', display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center', fontWeight: '700', padding: '0 2px'
-                                }}>
-                                    {count}
-                                </span>
-                            )}
-                        </button>
-
-                        {/* Bag Dropdown Overlay */}
-                        {bagOpen && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '34px',
-                                right: '-30px',
-                                width: '280px',
-                                background: '#fff',
-                                borderRadius: '18px',
-                                border: '1px solid #d2d2d7',
-                                padding: '20px',
-                                boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-                                zIndex: 101,
-                                textAlign: 'left',
-                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
-                            }}>
-                                <h4 style={{ color: '#6e6e73', fontSize: '14px', fontWeight: '600', marginBottom: '16px', marginTop: 0 }}>
-                                    {count === 0 ? 'Your Bag is empty.' : `${count} item${count > 1 ? 's' : ''} in your bag`}
-                                </h4>
-
-                                {count === 0 && (
-                                    <Link to="/" onClick={() => setBagOpen(false)} style={{ color: '#0066cc', textDecoration: 'underline', fontSize: '12px', display: 'block', marginBottom: '20px' }}>
-                                        Shop Now
-                                    </Link>
-                                )}
-
+                    {user?.role !== 'admin' && (
+                        <div ref={bagRef}>
+                            <button
+                                style={{ ...link, background: 'none', border: 'none', cursor: 'pointer', position: 'relative', padding: 0 }}
+                                onClick={() => setBagOpen(!bagOpen)}
+                            >
+                                <ShoppingBag size={14} style={{ opacity: 0.8 }} />
                                 {count > 0 && (
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <Link to="/cart" onClick={() => setBagOpen(false)} style={{
-                                            display: 'block', width: '100%', background: '#0066cc', color: '#fff', textAlign: 'center',
-                                            padding: '12px 0', borderRadius: '12px', textDecoration: 'none', fontSize: '14px', fontWeight: '400',
-                                            boxSizing: 'border-box'
-                                        }}>
-                                            Review Bag
-                                        </Link>
-                                    </div>
+                                    <span style={{
+                                        position: 'absolute', top: '-6px', right: '-8px', background: '#0066cc', color: '#fff',
+                                        borderRadius: '50%', minWidth: '14px', height: '14px', fontSize: '9px', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center', fontWeight: '700', padding: '0 2px'
+                                    }}>
+                                        {count}
+                                    </span>
                                 )}
+                            </button>
 
-                                {user ? (
-                                    <div>
-                                        <h5 style={{ color: '#6e6e73', fontSize: '12px', fontWeight: '600', marginBottom: '12px', marginTop: '16px' }}>My Profile</h5>
-                                        <Link to="/orders" onClick={() => setBagOpen(false)} style={{ display: 'block', color: '#1d1d1f', textDecoration: 'none', fontSize: '12px', padding: '8px 0', borderBottom: '1px solid #eee' }}>📦 Orders</Link>
-                                        <Link to="/orders" onClick={() => setBagOpen(false)} style={{ display: 'block', color: '#1d1d1f', textDecoration: 'none', fontSize: '12px', padding: '8px 0', borderBottom: '1px solid #eee' }}>🔖 Your Saves</Link>
-                                        <div style={{ display: 'block', color: '#1d1d1f', fontSize: '12px', padding: '8px 0', borderBottom: '1px solid #eee' }}>👤 Account</div>
-                                        {user.role === 'admin' && (
-                                            <Link to="/admin" onClick={() => setBagOpen(false)} style={{ display: 'block', color: '#f59e0b', textDecoration: 'none', fontSize: '12px', padding: '8px 0', borderBottom: '1px solid #eee' }}>⚙️ Admin Dashboard</Link>
-                                        )}
-                                        <button onClick={() => { handleLogout(); setBagOpen(false) }} style={{ background: 'none', border: 'none', padding: '8px 0', color: '#1d1d1f', fontSize: '12px', cursor: 'pointer', display: 'block', width: '100%', textAlign: 'left' }}>
-                                            ⎋ Sign out {user.name}
-                                        </button>
+                            {/* Bag Dropdown Overlay */}
+                            {bagOpen && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '34px',
+                                    right: '-30px',
+                                    width: '280px',
+                                    background: '#fff',
+                                    borderRadius: '18px',
+                                    border: '1px solid #d2d2d7',
+                                    padding: '20px',
+                                    boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                                    zIndex: 101,
+                                    textAlign: 'left',
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+                                }}>
+                                    <h4 style={{ color: '#6e6e73', fontSize: '14px', fontWeight: '600', marginBottom: '16px', marginTop: 0 }}>
+                                        {count === 0 ? 'Your Bag is empty.' : `${count} item${count > 1 ? 's' : ''} in your bag`}
+                                    </h4>
+
+                                    {count === 0 && (
+                                        <Link to="/" onClick={() => setBagOpen(false)} style={{ color: '#0066cc', textDecoration: 'underline', fontSize: '12px', display: 'block', marginBottom: '20px' }}>
+                                            Shop Now
+                                        </Link>
+                                    )}
+
+                                    {count > 0 && (
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <Link to="/cart" onClick={() => setBagOpen(false)} style={{
+                                                display: 'block', width: '100%', background: '#0066cc', color: '#fff', textAlign: 'center',
+                                                padding: '12px 0', borderRadius: '12px', textDecoration: 'none', fontSize: '14px', fontWeight: '400',
+                                                boxSizing: 'border-box'
+                                            }}>
+                                                Review Bag
+                                            </Link>
+                                        </div>
+                                    )}
+
+                                    {/* Profile section */}
+                                    <div style={{ borderTop: '1px solid #e8e8ed', paddingTop: '16px' }}>
+                                        <h5 style={{ color: '#6e6e73', fontSize: '12px', fontWeight: '600', marginBottom: '12px', marginTop: 0 }}>My Profile</h5>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <Link to="/orders" onClick={() => setBagOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111', textDecoration: 'none', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}><Package size={14} color="#8f8f94" /> Orders</Link>
+                                            <Link to="/orders" onClick={() => setBagOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111', textDecoration: 'none', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}><Heart size={14} color="#8f8f94" /> Your Saves</Link>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111', textDecoration: 'none', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}><User size={14} color="#8f8f94" /> Account</div>
+
+                                            {user ? (
+                                                <button onClick={() => { handleLogout(); setBagOpen(false) }} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', padding: '8px 0', color: '#111', fontSize: '13px', cursor: 'pointer', textAlign: 'left' }}>
+                                                    <LogOut size={14} color="#8f8f94" /> Sign out {user.name}
+                                                </button>
+                                            ) : (
+                                                <Link to="/login" onClick={() => setBagOpen(false)} style={{ display: 'block', color: '#0066cc', textDecoration: 'none', fontSize: '13px', padding: '8px 0', marginTop: '4px' }}>Sign in to your account</Link>
+                                            )}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <div style={{ borderTop: '1px solid #eee', paddingTop: '16px', marginTop: '16px' }}>
-                                        <Link to="/login" onClick={() => setBagOpen(false)} style={{ display: 'block', color: '#0066cc', textDecoration: 'none', fontSize: '12px', padding: '8px 0' }}>Sign In</Link>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Admin quick links when not showing bag dropdown */}
+                    {user?.role === 'admin' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <Link to="/admin" style={{ ...link, fontWeight: '600', color: '#0066cc' }}><Settings size={14} style={{ marginRight: '6px' }} /> Dashboard</Link>
+                            <button onClick={handleLogout} style={{ ...link, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><LogOut size={14} style={{ marginRight: '6px' }} /> Sign Out</button>
+                        </div>
+                    )}
+
                 </div>
             </div>
         </nav>
