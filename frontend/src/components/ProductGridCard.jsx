@@ -9,12 +9,6 @@ export default function ProductGridCard({ product }) {
     const { user } = useAuth()
     const { addToCart } = useCart()
 
-    const handleAdminEdit = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        navigate(`/admin/products/${product.id}`)
-    }
-
     const handleCustomerBuy = (e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -29,7 +23,13 @@ export default function ProductGridCard({ product }) {
 
     return (
         <div
-            onClick={() => navigate(`/products/${product.id}`)}
+            onClick={() => {
+                if (user?.role === 'admin') {
+                    navigate(`/admin/products/${product.id}`)
+                } else {
+                    navigate(`/products/${product.id}`)
+                }
+            }}
             style={{
                 background: '#fff',
                 borderRadius: '16px',
@@ -73,25 +73,7 @@ export default function ProductGridCard({ product }) {
                 <p style={{ fontSize: '13px', fontWeight: '600', color: '#111', marginBottom: '8px' }}>
                     From ₱{parseFloat(product.price).toLocaleString()}
                 </p>
-                {user?.role === 'admin' ? (
-                    <button
-                        onClick={handleAdminEdit}
-                        style={{
-                            background: 'none',
-                            color: '#f59e0b',
-                            border: 'none',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            padding: 0,
-                            fontWeight: '600',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                        }}
-                    >
-                        Edit ›
-                    </button>
-                ) : (
+                {user?.role !== 'admin' && (
                     <button
                         onClick={handleCustomerBuy}
                         disabled={product.stock === 0}
