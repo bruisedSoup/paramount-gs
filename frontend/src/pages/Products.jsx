@@ -143,10 +143,6 @@ export default function Products() {
                                                 <ProductGridCard product={p} />
                                             </div>
                                         ))}
-                                        {/* Fill empty slots */}
-                                        {Array.from({ length: Math.max(0, 4 - (latestProducts.length % 4 || 4)) }).map((_, i) => (
-                                            <div key={`empty-l-${i}`} style={{ height: cardHeight, background: '#fff', borderRadius: '16px', opacity: 0.4 }} />
-                                        ))}
                                     </div>
                                 </div>
 
