@@ -458,10 +458,25 @@ class DashboardView(APIView):
             for o in Order.objects.filter(status__in=['delivered', 'confirmed'])
         )
         recent_orders = list(Order.objects.order_by('-created_at')[:5])
+
+        # Aggregate order counts by status
+        orders = Order.objects.all()
+        orders_by_status = {}
+        for o in orders:
+            orders_by_status[o.status] = orders_by_status.get(o.status, 0) + 1
+
+        # Aggregate product counts by category
+        products = Product.objects.all()
+        products_by_category = {}
+        for p in products:
+            products_by_category[p.category] = products_by_category.get(p.category, 0) + 1
+
         return Response({
-            'total_products':  Product.objects.count(),
-            'total_orders':    Order.objects.count(),
-            'total_sales':     float(total_sales),
-            'total_customers': User.objects.filter(role='customer').count(),
-            'recent_orders':   [serialize_order(o) for o in recent_orders],
+            'total_products':       products.count(),
+            'total_orders':         orders.count(),
+            'total_sales':          float(total_sales),
+            'total_customers':      User.objects.filter(role='customer').count(),
+            'recent_orders':        [serialize_order(o) for o in recent_orders],
+            'orders_by_status':     orders_by_status,
+            'products_by_category': products_by_category,
         })
