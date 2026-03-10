@@ -23,43 +23,54 @@ export default function CategoryMenu({ categories = [], selectedCategory, onSele
         <div style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: '3rem',
-            padding: '2rem 0',
+            gap: 'clamp(1.5rem, 4vw, 3rem)',
+            padding: 'clamp(1.5rem, 4vw, 2rem) 0',
+            marginBottom: 'clamp(1.5rem, 3vw, 2rem)',
             flexWrap: 'wrap',
-            marginBottom: '2rem'
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            WebkitOverflowScrolling: 'touch',
         }}>
             {categories.filter(cat => cat !== 'All').map(cat => (
-                <div
+                <button
                     key={cat}
                     onClick={() => onSelect(cat)}
                     style={{
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '8px',
+                        gap: '6px',
                         cursor: 'pointer',
                         opacity: selectedCategory === cat || selectedCategory === 'All' ? 1 : 0.6,
                         transition: 'opacity 0.2s',
+                        background: 'none',
+                        border: 'none',
+                        padding: '0 clamp(8px, 2vw, 12px)',
+                        minWidth: 'clamp(56px, 12vw, 80px)',
                     }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = selectedCategory === cat ? '1' : '0.6'}
                 >
                     <img
                         src={categoryImages[cat]}
                         alt={cat}
                         style={{
-                            width: '64px',
-                            height: '64px',
+                            width: 'clamp(48px, 10vw, 64px)',
+                            height: 'clamp(48px, 10vw, 64px)',
                             objectFit: 'contain',
                         }}
                     />
                     <span style={{
-                        fontSize: '13px',
+                        fontSize: 'clamp(11px, 2vw, 13px)',
                         fontWeight: '500',
                         color: '#333',
-                        textTransform: 'capitalize'
+                        textTransform: 'capitalize',
+                        textAlign: 'center',
+                        lineHeight: 1.2,
                     }}>
                         {cat}
                     </span>
-                </div>
+                </button>
             ))}
         </div>
     )
