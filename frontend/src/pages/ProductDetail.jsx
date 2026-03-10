@@ -429,14 +429,8 @@ export default function ProductDetail() {
                                     onMouseEnter={e => e.currentTarget.style.background = T.accentHover}
                                     onMouseLeave={e => e.currentTarget.style.background = T.accent}
                                 >
-                                    {user ? 'Add to Cart' : '🛒 Add to Cart — Sign In Required'}
+                                    {user ? 'Add to Cart' : '🛒 Add to Cart'}
                                 </button>
-                                {!user && (
-                                    <p style={{ color: T.muted, fontSize: '12px', textAlign: 'center', marginTop: '8px' }}>
-                                        You need an account to purchase.{' '}
-                                        <span onClick={() => setShowAuthModal(true)} style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline' }}>Sign in or register</span>
-                                    </p>
-                                )}
                             </>
                         )}
                     </div>
