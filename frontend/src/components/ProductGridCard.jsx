@@ -32,33 +32,42 @@ export default function ProductGridCard({ product }) {
             }}
             style={{
                 background: '#fff',
-                borderRadius: '16px',
+                borderRadius: 'var(--radius)',
                 overflow: 'hidden',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                boxShadow: 'var(--shadow-sm)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                padding: '20px 20px 0 20px',
+                padding: 'clamp(12px, 3vw, 20px)',
                 height: '100%',
                 cursor: 'pointer',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                transition: 'all 0.2s ease',
+                border: '1px solid transparent',
             }}
             onMouseEnter={e => {
                 e.currentTarget.style.transform = 'scale(1.02)'
-                e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.12)'
+                e.currentTarget.style.boxShadow = 'var(--shadow-md)'
+                e.currentTarget.style.borderColor = '#d2d2d7'
             }}
             onMouseLeave={e => {
                 e.currentTarget.style.transform = 'scale(1)'
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'
+                e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
+                e.currentTarget.style.borderColor = 'transparent'
             }}
         >
             {/* Text block — top */}
             <div style={{ textAlign: 'left' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px', color: '#111', lineHeight: '1.2' }}>
+                <h4 style={{
+                    fontSize: 'clamp(13px, 2.5vw, 16px)',
+                    fontWeight: '700',
+                    marginBottom: '4px',
+                    color: '#111',
+                    lineHeight: '1.2',
+                }}>
                     {product.name}
-                </h3>
+                </h4>
                 <p style={{
-                    fontSize: '12px',
+                    fontSize: 'clamp(11px, 2vw, 13px)',
                     color: '#666',
                     marginBottom: '8px',
                     display: '-webkit-box',
@@ -66,11 +75,16 @@ export default function ProductGridCard({ product }) {
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                     lineHeight: '1.4',
-                    minHeight: '34px',
+                    minHeight: '28px',
                 }}>
                     {product.description || 'No description available.'}
                 </p>
-                <p style={{ fontSize: '13px', fontWeight: '600', color: '#111', marginBottom: '8px' }}>
+                <p style={{
+                    fontSize: 'clamp(12px, 2.5vw, 13px)',
+                    fontWeight: '600',
+                    color: '#111',
+                    marginBottom: '8px',
+                }}>
                     From ₱{parseFloat(product.price).toLocaleString()}
                 </p>
                 {user?.role !== 'admin' && (
@@ -81,13 +95,20 @@ export default function ProductGridCard({ product }) {
                             background: 'none',
                             color: product.stock > 0 ? '#0066cc' : '#999',
                             border: 'none',
-                            fontSize: '13px',
+                            fontSize: 'clamp(11px, 2vw, 13px)',
                             cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
                             padding: 0,
                             fontWeight: '500',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '2px',
+                            transition: 'color 0.15s',
+                        }}
+                        onMouseEnter={e => {
+                            if (product.stock > 0) e.target.style.color = '#0077ed'
+                        }}
+                        onMouseLeave={e => {
+                            if (product.stock > 0) e.target.style.color = '#0066cc'
                         }}
                     >
                         {product.stock > 0 ? 'Buy ›' : 'Sold Out'}
@@ -96,11 +117,20 @@ export default function ProductGridCard({ product }) {
             </div>
 
             {/* Image — bottom, no padding below */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', marginTop: '12px' }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                marginTop: 'clamp(8px, 2vw, 12px)',
+            }}>
                 <img
                     src={product.image_url || 'https://via.placeholder.com/220x180?text=No+Image'}
                     alt={product.name}
-                    style={{ width: '100%', maxHeight: '160px', objectFit: 'contain' }}
+                    style={{
+                        width: '100%',
+                        maxHeight: 'clamp(100px, 20vw, 160px)',
+                        objectFit: 'contain',
+                    }}
                 />
             </div>
         </div>
