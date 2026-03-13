@@ -74,14 +74,6 @@ else:
 
 # ── MongoDB ───────────────────────────────────────────────
 MONGODB_URI = os.getenv('MONGODB_URI', '')
-if MONGODB_URI:
-    try:
-        mongoengine.connect(host=MONGODB_URI, serverSelectionTimeoutMS=5000)
-        print("Connected to MongoDB successfully")
-    except Exception as e:
-        print(f"Error connecting to MongoDB: {e}")
-else:
-    print("MONGODB_URI not found in environment variables")
 
 # ── Cloudinary ────────────────────────────────────────────
 CLOUDINARY_STORAGE = {
