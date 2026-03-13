@@ -1,0 +1,10 @@
+{
+  "builds": [{
+      "src": "paramount/wsgi.py",
+      "use": "@vercel/python"
+  }],
+  "routes": [{
+      "src": "/(.*)",
+      "dest": "paramount/wsgi.py"
+  }]
+}
