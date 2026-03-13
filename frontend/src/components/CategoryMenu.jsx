@@ -21,57 +21,78 @@ export const categoryImages = {
 export default function CategoryMenu({ categories = [], selectedCategory, onSelect }) {
     return (
         <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 'clamp(1.5rem, 4vw, 3rem)',
-            padding: 'clamp(1.5rem, 4vw, 2rem) 0',
-            marginBottom: 'clamp(1.5rem, 3vw, 2rem)',
-            flexWrap: 'wrap',
             overflowX: 'auto',
             overflowY: 'hidden',
             WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none', // Firefox
+            msOverflowStyle: 'none', // IE/Edge
+            padding: 'clamp(1.5rem, 4vw, 2rem) 0',
+            marginBottom: 'clamp(1.5rem, 3vw, 2rem)',
         }}>
-            {categories.filter(cat => cat !== 'All').map(cat => (
-                <button
-                    key={cat}
-                    onClick={() => onSelect(cat)}
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        opacity: selectedCategory === cat || selectedCategory === 'All' ? 1 : 0.6,
-                        transition: 'opacity 0.2s',
-                        background: 'none',
-                        border: 'none',
-                        padding: '0 clamp(8px, 2vw, 12px)',
-                        minWidth: 'clamp(56px, 12vw, 80px)',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                    onMouseLeave={e => e.currentTarget.style.opacity = selectedCategory === cat ? '1' : '0.6'}
-                >
-                    <img
-                        src={categoryImages[cat]}
-                        alt={cat}
+            <style>
+                {`
+                    div::-webkit-scrollbar {
+                        display: none;
+                    }
+                `}
+            </style>
+            <div style={{
+                display: 'flex',
+                gap: 'clamp(1.5rem, 4vw, 3rem)',
+                justifyContent: 'flex-start',
+                paddingLeft: '4px',
+                paddingRight: '4px',
+            }}>
+                {categories.filter(cat => cat !== 'All').map(cat => (
+                    <button
+                        key={cat}
+                        onClick={() => onSelect(cat)}
                         style={{
-                            width: 'clamp(48px, 10vw, 64px)',
-                            height: 'clamp(48px, 10vw, 64px)',
-                            objectFit: 'contain',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            opacity: selectedCategory === cat || selectedCategory === 'All' ? 1 : 0.55,
+                            transition: 'opacity 0.2s, transform 0.2s',
+                            background: 'none',
+                            border: 'none',
+                            padding: '0 clamp(8px, 2vw, 12px)',
+                            minWidth: 'clamp(72px, 14vw, 100px)',
+                            flexShrink: 0,
                         }}
-                    />
-                    <span style={{
-                        fontSize: 'clamp(11px, 2vw, 13px)',
-                        fontWeight: '500',
-                        color: '#333',
-                        textTransform: 'capitalize',
-                        textAlign: 'center',
-                        lineHeight: 1.2,
-                    }}>
-                        {cat}
-                    </span>
-                </button>
-            ))}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.opacity = '1'
+                            e.currentTarget.style.transform = 'translateY(-2px)'
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.opacity = selectedCategory === cat ? '1' : '0.55'
+                            e.currentTarget.style.transform = 'translateY(0)'
+                        }}
+                    >
+                        <img
+                            src={categoryImages[cat]}
+                            alt={cat}
+                            style={{
+                                width: 'clamp(72px, 14vw, 96px)',
+                                height: 'clamp(72px, 14vw, 96px)',
+                                objectFit: 'contain',
+                            }}
+                        />
+                        <span style={{
+                            fontSize: 'clamp(13px, 2.2vw, 15px)',
+                            fontWeight: selectedCategory === cat ? '700' : '500',
+                            color: selectedCategory === cat ? '#111' : '#444',
+                            textTransform: 'capitalize',
+                            textAlign: 'center',
+                            lineHeight: 1.2,
+                            transition: 'color 0.2s, font-weight 0.2s',
+                        }}>
+                            {cat}
+                        </span>
+                    </button>
+                ))}
+            </div>
         </div>
     )
 }
