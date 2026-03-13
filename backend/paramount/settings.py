@@ -1,14 +1,19 @@
 import os
-import mongoengine
 from pathlib import Path
+from datetime import timedelta
+import mongoengine
 from dotenv import load_dotenv
+
+# ── Load .env variables ─────────────────────────────────────
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('JWT_SECRET_KEY', default='change-this-to-a-very-long-random-secret-key-in-production')
-DEBUG      = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
+SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'change-this-to-a-very-long-random-secret-key-in-production')
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
+# ── Installed apps ─────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -25,6 +30,7 @@ INSTALLED_APPS = [
     'api',
 ]
 
+# ── Middleware ────────────────────────────────────────────
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -37,9 +43,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF     = 'paramount.urls'
+ROOT_URLCONF = 'paramount.urls'
 WSGI_APPLICATION = 'paramount.wsgi.application'
 
+# ── Templates ─────────────────────────────────────────────
 TEMPLATES = [{
     'BACKEND': 'django.template.backends.django.DjangoTemplates',
     'DIRS': [],
@@ -52,8 +59,8 @@ TEMPLATES = [{
     ]},
 }]
 
-# ── SQLite locally, PostgreSQL in production ──────────────
-DATABASE_URL = config('DATABASE_URL', default='')
+# ── Database ──────────────────────────────────────────────
+DATABASE_URL = os.getenv('DATABASE_URL', '')
 if DATABASE_URL:
     import dj_database_url
     DATABASES = {'default': dj_database_url.parse(DATABASE_URL)}
@@ -61,18 +68,26 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME':   BASE_DIR / 'db.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
-# ── MongoDB Atlas via mongoengine ─────────────────────────
-MONGODB_URI = config('MONGODB_URI', default='')
+# ── MongoDB ───────────────────────────────────────────────
+MONGODB_URI = os.getenv('MONGODB_URI', '')
+if MONGODB_URI:
+    try:
+        mongoengine.connect(host=MONGODB_URI, serverSelectionTimeoutMS=5000)
+        print("Connected to MongoDB successfully")
+    except Exception as e:
+        print(f"Error connecting to MongoDB: {e}")
+else:
+    print("MONGODB_URI not found in environment variables")
 
 # ── Cloudinary ────────────────────────────────────────────
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
-    'API_KEY':    config('CLOUDINARY_API_KEY', default=''),
-    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', ''),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY', ''),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', ''),
 }
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 MEDIA_URL = '/media/'
@@ -89,22 +104,26 @@ REST_FRAMEWORK = {
 
 # ── JWT ───────────────────────────────────────────────────
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME':    timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME':   timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS':    True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
-    'AUTH_HEADER_TYPES':        ('Bearer',),
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 # ── CORS ──────────────────────────────────────────────────
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:5173,http://localhost:3000,http://localhost:8080', cast=lambda v: [s.strip() for s in v.split(',')])
+CORS_ALLOWED_ORIGINS = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://localhost:3000,http://localhost:8080'
+).split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-AUTH_USER_MODEL    = 'api.User'
-STATIC_URL         = '/static/'
-STATIC_ROOT        = BASE_DIR / 'staticfiles'
+# ── Other settings ───────────────────────────────────────
+AUTH_USER_MODEL = 'api.User'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-LANGUAGE_CODE      = 'en-us'
-TIME_ZONE          = 'UTC'
-USE_I18N           = True
-USE_TZ             = True
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
