@@ -563,15 +563,17 @@ export default function Products() {
     const [loading, setLoading] = useState(true)
 
     const category = searchParams.get('category') || 'All'
+    const searchQuery = searchParams.get('search') || ''
 
     useEffect(() => {
         const params = {}
         if (category !== 'All') params.category = category
+        if (searchQuery) params.search = searchQuery
         setLoading(true)
         getProducts(params)
             .then(r => setProducts(r.data.results || r.data))
             .finally(() => setLoading(false))
-    }, [category])
+    }, [category, searchQuery])
 
     const handleCategorySelect = (cat) => setSearchParams({ category: cat })
 
@@ -598,7 +600,16 @@ export default function Products() {
             <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '0 clamp(1rem, 4vw, 2rem)' }}>
 
                 {/* Header */}
-                {category === 'All' ? (
+                {searchQuery ? (
+                    <div style={{ paddingTop: 'clamp(28px, 6vw, 60px)', paddingBottom: '20px' }}>
+                        <h1 style={{ fontSize: 'clamp(2rem, 7vw, 3.5rem)', fontWeight: '700', margin: '0 0 8px', color: '#111', letterSpacing: '-0.02em' }}>
+                            Results for "{searchQuery}"
+                        </h1>
+                        <p style={{ color: '#6e6e73', fontSize: '15px', margin: 0 }}>
+                            {products.length} product{products.length !== 1 ? 's' : ''} found
+                        </p>
+                    </div>
+                ) : category === 'All' ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'clamp(28px, 6vw, 60px) 0 clamp(20px, 4vw, 40px)', flexWrap: 'wrap', gap: '16px' }}>
                         <h1 style={{ fontSize: 'clamp(2rem, 7vw, 3.5rem)', fontWeight: '700', margin: 0, color: '#111', letterSpacing: '-0.02em' }}>Store</h1>
                         <h2 style={{ fontSize: 'clamp(1rem, 3.5vw, 1.75rem)', fontWeight: '600', color: '#111', margin: 0, lineHeight: '1.2', maxWidth: '360px', letterSpacing: '-0.01em' }}>
@@ -627,7 +638,26 @@ export default function Products() {
                     </div>
                 ) : (
                     <>
-                        {category === 'All' ? (
+                        {searchQuery ? (
+                            /* Search results — flat grid */
+                            <div style={{ marginTop: '24px' }}>
+                                {products.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '4rem', color: '#6e6e73' }}>
+                                        <p style={{ fontSize: '42px', marginBottom: '12px' }}>🔍</p>
+                                        <p style={{ color: '#111', fontWeight: '600', fontSize: '18px', marginBottom: '6px' }}>No results for "{searchQuery}"</p>
+                                        <p style={{ fontSize: '14px' }}>Try a different search term or browse by category.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(160px, 40vw, 220px), 1fr))', gap: 'clamp(8px, 2vw, 12px)' }}>
+                                        {products.map(p => (
+                                            <div key={p.id} style={{ height: '280px' }}>
+                                                <ProductGridCard product={p} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : category === 'All' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
                                 {/* Fix 2: The Latest — 7 products, no View All button */}

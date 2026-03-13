@@ -11,7 +11,11 @@ export default function Navbar() {
     const navigate = useNavigate()
     const [bagOpen, setBagOpen] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
+    const [searchOpen, setSearchOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState('')
     const bagRef = useRef(null)
+    const searchRef = useRef(null)
+    const searchInputRef = useRef(null)
 
     const handleLogout = async () => {
         await logoutUser()
@@ -19,15 +23,36 @@ export default function Navbar() {
         navigate('/login')
     }
 
+    const handleSearchSubmit = (e) => {
+        e.preventDefault()
+        const q = searchValue.trim()
+        if (q) {
+            navigate(`/?search=${encodeURIComponent(q)}`)
+        } else {
+            navigate('/')
+        }
+        setSearchOpen(false)
+        setSearchValue('')
+    }
+
+    const openSearch = () => {
+        setSearchOpen(true)
+        setBagOpen(false)
+        setTimeout(() => searchInputRef.current?.focus(), 50)
+    }
+
     useEffect(() => {
         function handleClickOutside(event) {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setSearchOpen(false)
+            }
             if (bagRef.current && !bagRef.current.contains(event.target)) {
                 setBagOpen(false)
             }
         }
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [bagRef])
+    }, [])
 
     useEffect(() => {
         const onResize = () => { if (window.innerWidth > 768) setMenuOpen(false) }
@@ -35,9 +60,15 @@ export default function Navbar() {
         return () => window.removeEventListener('resize', onResize)
     }, [])
 
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') { setSearchOpen(false); setSearchValue('') } }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [])
+
     const nav = {
-        background: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'saturate(180%) blur(20px)',
+        background: '#fff',
+        borderBottom: '1px solid #d2d2d7',
         height: '44px',
         display: 'flex',
         alignItems: 'center',
@@ -47,6 +78,7 @@ export default function Navbar() {
         zIndex: 100,
         width: '100%',
         boxSizing: 'border-box',
+        overflow: 'hidden',
     }
 
     const containerStyle = {
@@ -99,8 +131,7 @@ export default function Navbar() {
                     top: 44px;
                     left: 0;
                     right: 0;
-                    background: rgba(255,255,255,0.97);
-                    backdrop-filter: saturate(180%) blur(20px);
+                    background: #fff;
                     border-bottom: 1px solid #d2d2d7;
                     z-index: 99;
                     padding: 8px 0 16px;
@@ -125,7 +156,7 @@ export default function Navbar() {
                     transition: background 0.15s;
                     box-sizing: border-box;
                 }
-                .nav-mobile-link:hover { background: rgba(0,0,0,0.04); }
+                .nav-mobile-link:hover { background: #f5f5f7; }
                 .nav-mobile-divider {
                     height: 1px;
                     background: #e8e8ed;
@@ -139,27 +170,71 @@ export default function Navbar() {
 
             <nav style={nav}>
                 <div style={containerStyle}>
-                    {/* Logo */}
                     <Link to="/" style={{ display: 'flex', alignItems: 'center' }} onClick={() => setMenuOpen(false)}>
                         <img src="/paramount-gs.png" alt="Paramount Gadgets" style={{ height: '24px' }} />
                     </Link>
 
-                    {/* Categories — desktop only */}
-                    <div className="nav-links-desktop">
-                        {LINKS.map(item => (
-                            <Link
-                                key={item}
-                                to={`/?category=${item === 'Store' ? 'All' : item.toLowerCase()}`}
-                                style={link}
-                            >
-                                {item}
-                            </Link>
-                        ))}
-                    </div>
+                    {!searchOpen && (
+                        <div className="nav-links-desktop">
+                            {LINKS.map(item => (
+                                <Link
+                                    key={item}
+                                    to={`/?category=${item === 'Store' ? 'All' : item.toLowerCase()}`}
+                                    style={link}
+                                >
+                                    {item}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
 
-                    {/* Right icons */}
+                    {searchOpen && (
+                        <form
+                            ref={searchRef}
+                            onSubmit={handleSearchSubmit}
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                margin: '0 20px',
+                                background: '#e8e8ed',
+                                borderRadius: '980px',
+                                padding: '0 12px',
+                                height: '28px',
+                                gap: '6px',
+                                overflow: 'hidden',
+                            }}
+                        >
+                            <Search size={13} style={{ color: '#6e6e73', flexShrink: 0 }} />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                value={searchValue}
+                                onChange={e => setSearchValue(e.target.value)}
+                                placeholder="Search products…"
+                                style={{
+                                    flex: 1,
+                                    background: 'none',
+                                    border: 'none',
+                                    outline: 'none',
+                                    fontSize: '13px',
+                                    color: '#111',
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                                }}
+                            />
+                            {searchValue && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchValue('')}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: '#6e6e73' }}
+                                >
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </form>
+                    )}
+
                     <div style={{ display: 'flex', gap: '20px', alignItems: 'center', position: 'relative' }}>
-                        {/* Hamburger — mobile only */}
                         <button
                             className="nav-hamburger"
                             onClick={() => setMenuOpen(o => !o)}
@@ -168,9 +243,13 @@ export default function Navbar() {
                             {menuOpen ? <X size={16} /> : <Menu size={16} />}
                         </button>
 
-                        <Link to="/" style={link}>
+                        <button
+                            onClick={searchOpen ? handleSearchSubmit : openSearch}
+                            style={{ ...link, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                            aria-label="Search"
+                        >
                             <Search size={14} style={{ opacity: 0.8 }} />
-                        </Link>
+                        </button>
 
                         {user?.role !== 'admin' && (
                             <div ref={bagRef}>
@@ -274,6 +353,16 @@ export default function Navbar() {
 
             {/* Mobile dropdown menu */}
             <div className={`nav-mobile-dropdown${menuOpen ? ' open' : ''}`}>
+                <form onSubmit={handleSearchSubmit} style={{ padding: '8px 22px 4px', display: 'flex', alignItems: 'center', gap: '8px', background: '#e8e8ed', margin: '0 22px 4px', borderRadius: '10px' }}>
+                    <Search size={14} color="#6e6e73" />
+                    <input
+                        type="text"
+                        value={searchValue}
+                        onChange={e => setSearchValue(e.target.value)}
+                        placeholder="Search products…"
+                        style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '14px', color: '#111', padding: '8px 0', fontFamily: 'inherit' }}
+                    />
+                </form>
                 {LINKS.map(item => (
                     <Link
                         key={item}
