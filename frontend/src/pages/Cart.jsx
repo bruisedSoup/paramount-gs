@@ -55,6 +55,34 @@ export default function Cart() {
 
     return (
         <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: FF, paddingBottom: '60px' }}>
+            <style>{`
+                .cart-item {
+                    background: #fff;
+                    border: 1px solid #d2d2d7;
+                    border-radius: 12px;
+                    padding: clamp(12px, 3vw, 16px);
+                    margin-bottom: 10px;
+                    display: grid;
+                    grid-template-columns: auto 1fr auto auto auto;
+                    gap: clamp(8px, 2vw, 16px);
+                    align-items: center;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                }
+                @media (max-width: 480px) {
+                    .cart-item {
+                        grid-template-columns: auto 1fr auto;
+                        grid-template-rows: auto auto;
+                    }
+                    .cart-item-price {
+                        grid-column: 2;
+                        text-align: left;
+                    }
+                    .cart-item-delete {
+                        grid-column: 3;
+                        grid-row: 1 / span 2;
+                    }
+                }
+            `}</style>
             <div style={{
                 maxWidth: '800px',
                 margin: '0 auto',
@@ -71,19 +99,7 @@ export default function Cart() {
                 </h1>
 
                 {cart.map(item => (
-                    <div key={item.product.id} style={{
-                        background: '#fff',
-                        border: '1px solid #d2d2d7',
-                        borderRadius: '12px',
-                        padding: 'clamp(12px, 3vw, 16px)',
-                        marginBottom: '10px',
-                        display: 'grid',
-                        gridTemplateColumns: 'auto 1fr auto auto auto',
-                        gap: 'clamp(8px, 2vw, 16px)',
-                        alignItems: 'center',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                        flexWrap: 'wrap',
-                    }}>
+                    <div key={item.product.id} className="cart-item">
                         <img
                             src={item.product.image_url || 'https://via.placeholder.com/80'}
                             alt={item.product.name}

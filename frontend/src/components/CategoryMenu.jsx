@@ -1,12 +1,12 @@
 import React from 'react'
 
-import phonesImg from '../assets/phones.jpg'
+import phonesImg from '../assets/phones.png'
 import laptopsImg from '../assets/laptops.png'
-import tabletsImg from '../assets/tablets.jpg'
+import tabletsImg from '../assets/tablets.png'
 import accessoriesImg from '../assets/accessories.png'
 import audioImg from '../assets/audio.png'
-import camerasImg from '../assets/camera.jpg'
-import gamingImg from '../assets/gaming.jpg'
+import camerasImg from '../assets/camera.png'
+import gamingImg from '../assets/gaming.png'
 
 export const categoryImages = {
     phones: phonesImg,

@@ -333,9 +333,9 @@ export default function OrderHistory() {
     )
 
     return (
-        <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', paddingBottom: '60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
-            <div style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem' }}>
-                <h1 style={{ color: '#111', fontSize: '32px', fontWeight: '800', marginBottom: '24px', letterSpacing: '-0.02em' }}>My Orders</h1>
+        <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', paddingBottom: 'clamp(40px, 8vw, 60px)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+            <div style={{ maxWidth: '860px', margin: '0 auto', padding: 'clamp(1rem, 4vw, 2rem)' }}>
+                <h1 style={{ color: '#111', fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '800', marginBottom: '24px', letterSpacing: '-0.02em' }}>My Orders</h1>
 
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: '#e8e8ed', borderRadius: '12px', padding: '4px', border: '1px solid #d2d2d7' }}>

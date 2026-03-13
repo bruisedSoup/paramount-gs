@@ -48,9 +48,9 @@ export default function Checkout() {
     }
 
     return (
-        <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: FF, paddingBottom: '60px' }}>
-            <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem' }}>
-                <h1 style={{ color: '#111', fontSize: '32px', fontWeight: '800', marginBottom: '2rem', letterSpacing: '-0.02em' }}>
+        <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', fontFamily: FF, paddingBottom: 'clamp(40px, 8vw, 60px)' }}>
+            <div style={{ maxWidth: '600px', margin: '0 auto', padding: 'clamp(1rem, 4vw, 2rem)' }}>
+                <h1 style={{ color: '#111', fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: '800', marginBottom: 'clamp(1rem, 3vw, 2rem)', letterSpacing: '-0.02em' }}>
                     Checkout
                 </h1>
 

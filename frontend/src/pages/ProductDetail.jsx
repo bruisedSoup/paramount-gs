@@ -352,8 +352,28 @@ export default function ProductDetail() {
     ] : []
 
     return (
-        <div style={{ backgroundColor: T.bg, minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', paddingBottom: '80px' }}>
-            <div style={{ maxWidth: '980px', margin: '0 auto', padding: '2rem 2rem' }}>
+        <div style={{ backgroundColor: T.bg, minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', paddingBottom: 'clamp(40px, 8vw, 80px)' }}>
+            <style>{`
+                .pd-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 3rem;
+                    margin-bottom: 3rem;
+                    align-items: start;
+                }
+                .pd-container {
+                    max-width: 980px;
+                    margin: 0 auto;
+                    padding: clamp(1rem, 4vw, 2rem);
+                }
+                @media (max-width: 640px) {
+                    .pd-grid {
+                        grid-template-columns: 1fr;
+                        gap: 1.5rem;
+                    }
+                }
+            `}</style>
+            <div className="pd-container">
 
                 {/* Breadcrumb */}
                 <p style={{ color: T.muted, fontSize: '13px', marginBottom: '24px' }}>
@@ -365,7 +385,7 @@ export default function ProductDetail() {
                 </p>
 
                 {/* Product section */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginBottom: '3rem', alignItems: 'start' }}>
+                <div className="pd-grid">
 
                     {/* Image */}
                     <div style={{ background: T.card, borderRadius: '18px', padding: '2rem', boxShadow: T.cardShadow, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
