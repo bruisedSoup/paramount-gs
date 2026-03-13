@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 import { AnimatePresence, motion } from 'motion/react'
 
 import accessoriesCardBg from '../assets/accessories-card.png'
-import musicCardBg from '../assets/music-card.png'
+import musicCardBg from '../assets/music-card2.png'
 
 const CATEGORIES = ['All', 'phones', 'laptops', 'tablets', 'accessories', 'audio', 'cameras', 'gaming']
 
@@ -32,12 +32,12 @@ function ProductCarousel({ items }) {
         }
     }
 
-    const scrollLeft = () => carouselRef.current?.scrollBy({ left: -300, behavior: 'smooth' })
-    const scrollRight = () => carouselRef.current?.scrollBy({ left: 300, behavior: 'smooth' })
+    const scrollLeft = () => carouselRef.current?.scrollBy({ left: -420, behavior: 'smooth' })
+    const scrollRight = () => carouselRef.current?.scrollBy({ left: 420, behavior: 'smooth' })
 
     const handleCardClose = (index) => {
         if (carouselRef.current) {
-            const cardWidth = window.innerWidth < 768 ? 220 : 280
+            const cardWidth = window.innerWidth < 768 ? 260 : 412
             const gap = 12
             carouselRef.current.scrollTo({ left: (cardWidth + gap) * index, behavior: 'smooth' })
             setCurrentIndex(index)
@@ -258,9 +258,8 @@ function AppleProductCard({ product, index }) {
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
                 style={{
-                    // Portrait dimensions — tall card
-                    width: '220px',
-                    height: '340px',
+                    width: 'clamp(260px, 30vw, 412px)',
+                    height: 'clamp(320px, 38vw, 500px)',
                     borderRadius: '20px',
                     overflow: 'hidden',
                     cursor: 'pointer',
@@ -305,9 +304,9 @@ function AppleProductCard({ product, index }) {
                 )}
 
                 {/* Top text — category */}
-                <div style={{ position: 'relative', zIndex: 3, padding: '16px 16px 0' }}>
+                <div style={{ position: 'relative', zIndex: 3, padding: '20px 20px 0' }}>
                     <p style={{
-                        fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.75)',
+                        fontSize: '13px', fontWeight: '600', color: 'rgba(255,255,255,0.75)',
                         textTransform: 'capitalize', letterSpacing: '0.04em', margin: 0,
                     }}>
                         {product.category}
@@ -315,16 +314,16 @@ function AppleProductCard({ product, index }) {
                 </div>
 
                 {/* Bottom text — name + price + buy */}
-                <div style={{ position: 'relative', zIndex: 3, padding: '0 16px 16px' }}>
+                <div style={{ position: 'relative', zIndex: 3, padding: '0 20px 22px' }}>
                     <h4 style={{
-                        fontSize: '16px', fontWeight: '700', color: '#fff',
-                        margin: '0 0 3px', lineHeight: '1.25',
+                        fontSize: 'clamp(16px, 2vw, 22px)', fontWeight: '700', color: '#fff',
+                        margin: '0 0 4px', lineHeight: '1.25',
                         display: '-webkit-box', WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical', overflow: 'hidden',
                     }}>
                         {product.name}
                     </h4>
-                    <p style={{ fontSize: '13px', fontWeight: '600', color: 'rgba(255,255,255,0.85)', margin: '0 0 10px' }}>
+                    <p style={{ fontSize: 'clamp(13px, 1.4vw, 16px)', fontWeight: '600', color: 'rgba(255,255,255,0.85)', margin: '0 0 14px' }}>
                         From ₱{parseFloat(product.price).toLocaleString()}
                     </p>
                     {user?.role !== 'admin' && (
@@ -335,8 +334,9 @@ function AppleProductCard({ product, index }) {
                                 background: isOutOfStock ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
                                 color: isOutOfStock ? 'rgba(255,255,255,0.5)' : '#0066cc',
                                 border: 'none', borderRadius: '980px',
-                                fontSize: '12px', fontWeight: '600',
-                                padding: '6px 14px', cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                                fontSize: 'clamp(12px, 1.2vw, 15px)', fontWeight: '600',
+                                padding: 'clamp(6px,0.6vw,9px) clamp(14px,1.5vw,20px)',
+                                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                                 transition: 'all 0.15s',
                             }}
                             onMouseEnter={e => { if (!isOutOfStock) e.target.style.background = '#fff' }}
@@ -355,25 +355,26 @@ function AppleProductCard({ product, index }) {
 function BannerCard({ title, subtitle, imageSrc }) {
     return (
         <div style={{
-            width: '220px', height: '340px',
+            width: 'clamp(260px, 30vw, 412px)',
+            height: 'clamp(320px, 38vw, 500px)',
             background: '#1d1d1f', borderRadius: '20px',
             overflow: 'hidden', flexShrink: 0,
             display: 'flex', flexDirection: 'column',
             justifyContent: 'space-between',
-            padding: '16px 16px 0',
+            padding: '20px 20px 0',
         }}>
             <div>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#fff', marginBottom: '4px', lineHeight: '1.2' }}>
+                <h3 style={{ fontSize: 'clamp(14px, 1.8vw, 22px)', fontWeight: '700', color: '#fff', marginBottom: '6px', lineHeight: '1.2' }}>
                     {title}
                 </h3>
-                <p style={{ fontSize: '11px', color: '#ababab', lineHeight: '1.4', whiteSpace: 'pre-line' }}>
+                <p style={{ fontSize: 'clamp(11px, 1.2vw, 15px)', color: '#ababab', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
                     {subtitle}
                 </p>
             </div>
             <img
                 src={imageSrc}
                 alt={title}
-                style={{ width: '100%', flex: 1, objectFit: 'cover', marginTop: '12px' }}
+                style={{ width: '100%', flex: 1, objectFit: 'cover', marginTop: '16px' }}
             />
         </div>
     )

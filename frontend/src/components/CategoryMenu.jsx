@@ -92,6 +92,46 @@ export default function CategoryMenu({ categories = [], selectedCategory, onSele
                         </span>
                     </button>
                 ))}
+
+                {/* Right arrow button — Apple-style */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    paddingLeft: '4px',
+                    paddingRight: '8px',
+                }}>
+                    <button
+                        style={{
+                            width: 'clamp(36px, 5vw, 44px)',
+                            height: 'clamp(36px, 5vw, 44px)',
+                            borderRadius: '50%',
+                            background: '#e8e8ed',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'background 0.2s, transform 0.2s',
+                            flexShrink: 0,
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = '#d1d1d6'
+                            e.currentTarget.style.transform = 'scale(1.08)'
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = '#e8e8ed'
+                            e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                        aria-label="See all categories"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 3L11 8L6 13" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     )
