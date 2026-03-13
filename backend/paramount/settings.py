@@ -1,7 +1,6 @@
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
-import mongoengine
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
