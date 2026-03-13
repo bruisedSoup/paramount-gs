@@ -7,6 +7,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
+  // Add this to ensure correct asset pathing on Vercel
+  base: '/',
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -14,8 +16,16 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Keep this for your local development ease
     proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true }
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
+      }
     }
+  },
+  // Optional: Ensure the build output matches Vercel's expectation
+  build: {
+    outDir: 'dist',
   }
 })
