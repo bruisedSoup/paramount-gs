@@ -77,17 +77,18 @@ function ProductCarousel({ items }) {
                     <div style={{ flexShrink: 0, width: '20px' }} />
                 </div>
 
-                {/* Arrow buttons */}
+                {/* Arrow buttons — always visible (Fix 1) */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
                     <button
                         onClick={scrollLeft}
-                        disabled={!canScrollLeft}
                         style={{
                             width: '36px', height: '36px', borderRadius: '50%',
-                            border: 'none', background: '#e5e5ea', cursor: canScrollLeft ? 'pointer' : 'not-allowed',
-                            opacity: canScrollLeft ? 1 : 0.4, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'opacity 0.2s',
+                            border: 'none', background: '#e5e5ea', cursor: 'pointer',
+                            opacity: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'background 0.2s',
                         }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#d1d1d6'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#e5e5ea'}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M15 18l-6-6 6-6" />
@@ -95,13 +96,14 @@ function ProductCarousel({ items }) {
                     </button>
                     <button
                         onClick={scrollRight}
-                        disabled={!canScrollRight}
                         style={{
                             width: '36px', height: '36px', borderRadius: '50%',
-                            border: 'none', background: '#e5e5ea', cursor: canScrollRight ? 'pointer' : 'not-allowed',
-                            opacity: canScrollRight ? 1 : 0.4, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'opacity 0.2s',
+                            border: 'none', background: '#e5e5ea', cursor: 'pointer',
+                            opacity: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'background 0.2s',
                         }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#d1d1d6'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#e5e5ea'}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 18l6-6-6-6" />
@@ -120,7 +122,6 @@ function AppleProductCard({ product, index }) {
     const { addToCart } = useCart()
     const [open, setOpen] = useState(false)
     const [imgLoaded, setImgLoaded] = useState(false)
-    const [showAuthModal, setShowAuthModal] = useState(false)
     const overlayRef = useRef(null)
     const { onCardClose } = useContext(CarouselContext)
 
@@ -136,9 +137,14 @@ function AppleProductCard({ product, index }) {
     const handleOpen = () => setOpen(true)
     const handleClose = () => { setOpen(false); onCardClose(index) }
 
+    // Fix 3: for logged-in users, add to cart; for unlogged users, open modal (same modal as clicking product)
     const handleBuy = (e) => {
         e.stopPropagation()
-        if (!user) { setShowAuthModal(true); return }
+        if (!user) {
+            // Open the product modal instead of auth modal
+            handleOpen()
+            return
+        }
         addToCart(product, 1)
         toast.success('Added to cart!')
     }
@@ -153,8 +159,6 @@ function AppleProductCard({ product, index }) {
 
     return (
         <>
-            {showAuthModal && <AuthPromptModal onClose={() => setShowAuthModal(false)} />}
-
             {/* ── Expanded overlay modal ── */}
             <AnimatePresence>
                 {open && (
@@ -222,22 +226,50 @@ function AppleProductCard({ product, index }) {
                                         From ₱{parseFloat(product.price).toLocaleString()}
                                     </p>
                                     {user?.role !== 'admin' && (
-                                        <button
-                                            onClick={handleBuy}
-                                            disabled={isOutOfStock}
-                                            style={{
-                                                padding: '12px 28px', borderRadius: '980px',
-                                                background: isOutOfStock ? '#d2d2d7' : '#0066cc',
-                                                color: '#fff', border: 'none',
-                                                fontSize: '15px', fontWeight: '600',
-                                                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                                                transition: 'background 0.15s',
-                                            }}
-                                            onMouseEnter={e => { if (!isOutOfStock) e.target.style.background = '#0077ed' }}
-                                            onMouseLeave={e => { if (!isOutOfStock) e.target.style.background = '#0066cc' }}
-                                        >
-                                            {isOutOfStock ? 'Sold Out' : 'Add to Cart'}
-                                        </button>
+                                        <>
+                                            {/* Fix 3: unlogged users see "Learn More", logged users see "Add to Cart" */}
+                                            {!user ? (
+                                                <button
+                                                    onClick={() => { handleClose(); navigate(`/products/${product.id}`) }}
+                                                    style={{
+                                                        padding: '12px 28px', borderRadius: '980px',
+                                                        background: '#0066cc',
+                                                        color: '#fff', border: 'none',
+                                                        fontSize: '15px', fontWeight: '600',
+                                                        cursor: 'pointer',
+                                                        transition: 'background 0.15s',
+                                                    }}
+                                                    onMouseEnter={e => e.target.style.background = '#0077ed'}
+                                                    onMouseLeave={e => e.target.style.background = '#0066cc'}
+                                                >
+                                                    Learn More
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        if (!isOutOfStock) {
+                                                            addToCart(product, 1)
+                                                            toast.success('Added to cart!')
+                                                            handleClose()
+                                                        }
+                                                    }}
+                                                    disabled={isOutOfStock}
+                                                    style={{
+                                                        padding: '12px 28px', borderRadius: '980px',
+                                                        background: isOutOfStock ? '#d2d2d7' : '#0066cc',
+                                                        color: '#fff', border: 'none',
+                                                        fontSize: '15px', fontWeight: '600',
+                                                        cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                                                        transition: 'background 0.15s',
+                                                    }}
+                                                    onMouseEnter={e => { if (!isOutOfStock) e.target.style.background = '#0077ed' }}
+                                                    onMouseLeave={e => { if (!isOutOfStock) e.target.style.background = '#0066cc' }}
+                                                >
+                                                    {isOutOfStock ? 'Sold Out' : 'Add to Cart'}
+                                                </button>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                                 {!isOutOfStock && (
@@ -381,21 +413,145 @@ function BannerCard({ title, subtitle, imageSrc }) {
 }
 
 // ─── Section with header + carousel ──────────────────────────────────────────
-function CarouselSection({ title, subtitle, linkLabel, onLinkClick, items }) {
+// Fix 2: accepts optional showViewAll prop (defaults true) to hide "View All" in Latest section
+function CarouselSection({ title, subtitle, linkLabel, onLinkClick, items, showViewAll = true }) {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
                 <h2 style={{ fontSize: 'clamp(16px, 3.5vw, 21px)', margin: 0, fontWeight: '700', color: '#111' }}>
                     {title} <span style={{ color: '#6e6e73', fontWeight: '600', fontSize: 'clamp(12px, 2.5vw, 16px)' }}>{subtitle}</span>
                 </h2>
-                <button
-                    onClick={onLinkClick}
-                    style={{ background: 'none', border: 'none', color: '#1d1d1f', fontSize: 'clamp(12px, 2vw, 14px)', fontWeight: '500', cursor: 'pointer', padding: 0, flexShrink: 0 }}
-                >
-                    {linkLabel}
-                </button>
+                {showViewAll && (
+                    <button
+                        onClick={onLinkClick}
+                        style={{ background: 'none', border: 'none', color: '#1d1d1f', fontSize: 'clamp(12px, 2vw, 14px)', fontWeight: '500', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+                    >
+                        {linkLabel}
+                    </button>
+                )}
             </div>
             <ProductCarousel items={items} />
+        </div>
+    )
+}
+
+// ─── Category Menu — shows exactly 6, right arrow scrolls to reveal the rest ──
+function CategoryMenuWithArrows({ categories, selectedCategory, onSelect }) {
+    const scrollRef = useRef(null)
+
+    const filteredCats = categories.filter(cat => cat !== 'All')
+
+    // Each item is exactly 1/6 of the scroll container width → 7th item is hidden
+    const ITEM_WIDTH = `calc((100%) / 6)`
+
+    const scrollRight = () => scrollRef.current?.scrollBy({ left: scrollRef.current.clientWidth / 6, behavior: 'smooth' })
+
+    const catImages = {
+        phones: new URL('../assets/phones.png', import.meta.url).href,
+        laptops: new URL('../assets/laptops.png', import.meta.url).href,
+        tablets: new URL('../assets/tablets.png', import.meta.url).href,
+        accessories: new URL('../assets/accessories.png', import.meta.url).href,
+        audio: new URL('../assets/audio.png', import.meta.url).href,
+        cameras: new URL('../assets/camera.png', import.meta.url).href,
+        gaming: new URL('../assets/gaming.png', import.meta.url).href,
+    }
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', padding: 'clamp(1.5rem, 4vw, 2rem) 0', marginBottom: 'clamp(1.5rem, 3vw, 2rem)' }}>
+            {/* Clip container — hides anything beyond 6 items */}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+                <style>{`.cat-scroll::-webkit-scrollbar { display: none; }`}</style>
+                <div
+                    ref={scrollRef}
+                    className="cat-scroll"
+                    style={{
+                        display: 'flex',
+                        overflowX: 'auto',
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                >
+                    {filteredCats.map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => onSelect(cat)}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                opacity: selectedCategory === cat || selectedCategory === 'All' ? 1 : 0.55,
+                                transition: 'opacity 0.2s, transform 0.2s',
+                                background: 'none',
+                                border: 'none',
+                                padding: '4px 0',
+                                // Fixed width = exactly 1/6 of container so the 7th is clipped
+                                width: ITEM_WIDTH,
+                                minWidth: ITEM_WIDTH,
+                                flexShrink: 0,
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.opacity = '1'
+                                e.currentTarget.style.transform = 'translateY(-2px)'
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.opacity = selectedCategory === cat ? '1' : '0.55'
+                                e.currentTarget.style.transform = 'translateY(0)'
+                            }}
+                        >
+                            <img
+                                src={catImages[cat] || ''}
+                                alt={cat}
+                                style={{
+                                    width: 'clamp(64px, 9vw, 88px)',
+                                    height: 'clamp(64px, 9vw, 88px)',
+                                    objectFit: 'contain',
+                                }}
+                            />
+                            <span style={{
+                                fontSize: 'clamp(12px, 1.5vw, 14px)',
+                                fontWeight: selectedCategory === cat ? '700' : '500',
+                                color: selectedCategory === cat ? '#111' : '#444',
+                                textTransform: 'capitalize',
+                                textAlign: 'center',
+                                lineHeight: 1.2,
+                                transition: 'color 0.2s, font-weight 0.2s',
+                                whiteSpace: 'nowrap',
+                            }}>
+                                {cat}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Right arrow — always visible, positioned right after the 6th item */}
+            <button
+                onClick={scrollRight}
+                style={{
+                    flexShrink: 0,
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: '#e8e8ed',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: '12px',
+                    transition: 'background 0.2s, transform 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#d1d1d6'; e.currentTarget.style.transform = 'scale(1.08)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#e8e8ed'; e.currentTarget.style.transform = 'scale(1)' }}
+                aria-label="Scroll categories right"
+            >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 3L11 8L6 13" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
         </div>
     )
 }
@@ -419,9 +575,10 @@ export default function Products() {
 
     const handleCategorySelect = (cat) => setSearchParams({ category: cat })
 
+    // Fix 2: Latest — only 7 most recently added products, sorted by created_at desc
     const latestProducts = [...products]
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-        .slice(0, 10)
+        .slice(0, 7)
 
     const latestAccessories = [...products]
         .filter(p => (p.category || '').toLowerCase() === 'accessories')
@@ -456,7 +613,12 @@ export default function Products() {
                     </div>
                 )}
 
-                <CategoryMenu categories={CATEGORIES} selectedCategory={category} onSelect={handleCategorySelect} />
+                {/* Fix 1: Replace CategoryMenu with CategoryMenuWithArrows in Products.jsx */}
+                <CategoryMenuWithArrows
+                    categories={CATEGORIES}
+                    selectedCategory={category}
+                    onSelect={handleCategorySelect}
+                />
 
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: '6rem' }}>
@@ -468,12 +630,13 @@ export default function Products() {
                         {category === 'All' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
-                                {/* The Latest */}
+                                {/* Fix 2: The Latest — 7 products, no View All button */}
                                 <CarouselSection
                                     title="The latest."
                                     subtitle="Take a look at what's new!"
                                     linkLabel="View All"
                                     onLinkClick={() => handleCategorySelect('All')}
+                                    showViewAll={false}
                                     items={latestProducts.map((p, i) => (
                                         <AppleProductCard key={p.id} product={p} index={i} />
                                     ))}
