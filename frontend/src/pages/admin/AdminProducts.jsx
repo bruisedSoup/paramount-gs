@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getProducts, deleteProduct } from '../../services/api'
+import { getProducts, deleteProduct, createProduct } from '../../services/api'
 import toast from 'react-hot-toast'
 import { Plus, Eye, Trash2, X, Search } from 'lucide-react'
 
@@ -254,11 +254,7 @@ export default function AdminProducts() {
                                     const fields = ['name', 'description', 'price', 'stock', 'category']
                                     fields.forEach(k => { if (form[k] !== '' && form[k] !== null) fd.append(k, form[k]) })
                                     if (imageFile instanceof File) fd.append('image', imageFile)
-                                    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/products/`, {
-                                        method: 'POST',
-                                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
-                                        body: fd
-                                    })
+                                    await createProduct(fd)
                                     toast.success('Product created!')
                                     setShowModal(false)
                                     load()
