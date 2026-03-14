@@ -77,7 +77,7 @@ function ProductCarousel({ items }) {
                     <div style={{ flexShrink: 0, width: '20px' }} />
                 </div>
 
-                {/* Arrow buttons — always visible (Fix 1) */}
+                {/* Arrow buttons */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
                     <button
                         onClick={scrollLeft}
@@ -119,11 +119,10 @@ function ProductCarousel({ items }) {
 function AppleProductCard({ product, index }) {
     const navigate = useNavigate()
     const { user } = useAuth()
-    const { addToCart } = useCart()
+    const { onCardClose } = useContext(CarouselContext)
     const [open, setOpen] = useState(false)
     const [imgLoaded, setImgLoaded] = useState(false)
     const overlayRef = useRef(null)
-    const { onCardClose } = useContext(CarouselContext)
 
     // Close on Escape
     useEffect(() => {
@@ -137,18 +136,14 @@ function AppleProductCard({ product, index }) {
     const handleOpen = () => setOpen(true)
     const handleClose = () => { setOpen(false); onCardClose(index) }
 
-    // Fix 3: for logged-in users, add to cart; for unlogged users, open modal (same modal as clicking product)
+    // "Buy ›" on the card always navigates to product detail (for all non-admin users)
     const handleBuy = (e) => {
         e.stopPropagation()
-        if (!user) {
-            // Open the product modal instead of auth modal
-            handleOpen()
-            return
-        }
-        addToCart(product, 1)
-        toast.success('Added to cart!')
+        if (user?.role === 'admin') return
+        navigate(`/products/${product.id}`)
     }
 
+    // Clicking the card itself: admin → admin detail, everyone else → open modal
     const handleCardClick = () => {
         if (user?.role === 'admin') navigate(`/admin/products/${product.id}`)
         else handleOpen()
@@ -225,51 +220,24 @@ function AppleProductCard({ product, index }) {
                                     <p style={{ fontSize: '22px', fontWeight: '700', color: '#111' }}>
                                         From ₱{parseFloat(product.price).toLocaleString()}
                                     </p>
+
+                                    {/* ── "Learn More" for everyone (logged-in or not), hidden for admin ── */}
                                     {user?.role !== 'admin' && (
-                                        <>
-                                            {/* Fix 3: unlogged users see "Learn More", logged users see "Add to Cart" */}
-                                            {!user ? (
-                                                <button
-                                                    onClick={() => { handleClose(); navigate(`/products/${product.id}`) }}
-                                                    style={{
-                                                        padding: '12px 28px', borderRadius: '980px',
-                                                        background: '#0066cc',
-                                                        color: '#fff', border: 'none',
-                                                        fontSize: '15px', fontWeight: '600',
-                                                        cursor: 'pointer',
-                                                        transition: 'background 0.15s',
-                                                    }}
-                                                    onMouseEnter={e => e.target.style.background = '#0077ed'}
-                                                    onMouseLeave={e => e.target.style.background = '#0066cc'}
-                                                >
-                                                    Learn More
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        if (!isOutOfStock) {
-                                                            addToCart(product, 1)
-                                                            toast.success('Added to cart!')
-                                                            handleClose()
-                                                        }
-                                                    }}
-                                                    disabled={isOutOfStock}
-                                                    style={{
-                                                        padding: '12px 28px', borderRadius: '980px',
-                                                        background: isOutOfStock ? '#d2d2d7' : '#0066cc',
-                                                        color: '#fff', border: 'none',
-                                                        fontSize: '15px', fontWeight: '600',
-                                                        cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                                                        transition: 'background 0.15s',
-                                                    }}
-                                                    onMouseEnter={e => { if (!isOutOfStock) e.target.style.background = '#0077ed' }}
-                                                    onMouseLeave={e => { if (!isOutOfStock) e.target.style.background = '#0066cc' }}
-                                                >
-                                                    {isOutOfStock ? 'Sold Out' : 'Add to Cart'}
-                                                </button>
-                                            )}
-                                        </>
+                                        <button
+                                            onClick={() => { handleClose(); navigate(`/products/${product.id}`) }}
+                                            style={{
+                                                padding: '12px 28px', borderRadius: '980px',
+                                                background: '#0066cc',
+                                                color: '#fff', border: 'none',
+                                                fontSize: '15px', fontWeight: '600',
+                                                cursor: 'pointer',
+                                                transition: 'background 0.15s',
+                                            }}
+                                            onMouseEnter={e => e.target.style.background = '#0077ed'}
+                                            onMouseLeave={e => e.target.style.background = '#0066cc'}
+                                        >
+                                            Learn More
+                                        </button>
                                     )}
                                 </div>
                                 {!isOutOfStock && (
@@ -358,9 +326,11 @@ function AppleProductCard({ product, index }) {
                     <p style={{ fontSize: 'clamp(13px, 1.4vw, 16px)', fontWeight: '600', color: 'rgba(255,255,255,0.85)', margin: '0 0 14px' }}>
                         From ₱{parseFloat(product.price).toLocaleString()}
                     </p>
+
+                    {/* "Buy ›" always navigates to product detail for non-admin users */}
                     {user?.role !== 'admin' && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); handleBuy(e) }}
+                            onClick={handleBuy}
                             disabled={isOutOfStock}
                             style={{
                                 background: isOutOfStock ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
@@ -383,7 +353,7 @@ function AppleProductCard({ product, index }) {
     )
 }
 
-// ─── Banner Card (unchanged style, now portrait) ─────────────────────────────
+// ─── Banner Card ─────────────────────────────────────────────────────────────
 function BannerCard({ title, subtitle, imageSrc }) {
     return (
         <div style={{
@@ -413,7 +383,6 @@ function BannerCard({ title, subtitle, imageSrc }) {
 }
 
 // ─── Section with header + carousel ──────────────────────────────────────────
-// Fix 2: accepts optional showViewAll prop (defaults true) to hide "View All" in Latest section
 function CarouselSection({ title, subtitle, linkLabel, onLinkClick, items, showViewAll = true }) {
     return (
         <div>
@@ -435,13 +404,12 @@ function CarouselSection({ title, subtitle, linkLabel, onLinkClick, items, showV
     )
 }
 
-// ─── Category Menu — shows exactly 6, right arrow scrolls to reveal the rest ──
+// ─── Category Menu ────────────────────────────────────────────────────────────
 function CategoryMenuWithArrows({ categories, selectedCategory, onSelect }) {
     const scrollRef = useRef(null)
 
     const filteredCats = categories.filter(cat => cat !== 'All')
 
-    // Each item is exactly 1/6 of the scroll container width → 7th item is hidden
     const ITEM_WIDTH = `calc((100%) / 6)`
 
     const scrollRight = () => scrollRef.current?.scrollBy({ left: scrollRef.current.clientWidth / 6, behavior: 'smooth' })
@@ -458,7 +426,6 @@ function CategoryMenuWithArrows({ categories, selectedCategory, onSelect }) {
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', padding: 'clamp(1.5rem, 4vw, 2rem) 0', marginBottom: 'clamp(1.5rem, 3vw, 2rem)' }}>
-            {/* Clip container — hides anything beyond 6 items */}
             <div style={{ flex: 1, overflow: 'hidden' }}>
                 <style>{`.cat-scroll::-webkit-scrollbar { display: none; }`}</style>
                 <div
@@ -487,7 +454,6 @@ function CategoryMenuWithArrows({ categories, selectedCategory, onSelect }) {
                                 background: 'none',
                                 border: 'none',
                                 padding: '4px 0',
-                                // Fixed width = exactly 1/6 of container so the 7th is clipped
                                 width: ITEM_WIDTH,
                                 minWidth: ITEM_WIDTH,
                                 flexShrink: 0,
@@ -527,7 +493,6 @@ function CategoryMenuWithArrows({ categories, selectedCategory, onSelect }) {
                 </div>
             </div>
 
-            {/* Right arrow — always visible, positioned right after the 6th item */}
             <button
                 onClick={scrollRight}
                 style={{
@@ -577,7 +542,6 @@ export default function Products() {
 
     const handleCategorySelect = (cat) => setSearchParams({ category: cat })
 
-    // Fix 2: Latest — only 7 most recently added products, sorted by created_at desc
     const latestProducts = [...products]
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
         .slice(0, 7)
@@ -624,7 +588,6 @@ export default function Products() {
                     </div>
                 )}
 
-                {/* Fix 1: Replace CategoryMenu with CategoryMenuWithArrows in Products.jsx */}
                 <CategoryMenuWithArrows
                     categories={CATEGORIES}
                     selectedCategory={category}
@@ -639,7 +602,6 @@ export default function Products() {
                 ) : (
                     <>
                         {searchQuery ? (
-                            /* Search results — flat grid */
                             <div style={{ marginTop: '24px' }}>
                                 {products.length === 0 ? (
                                     <div style={{ textAlign: 'center', padding: '4rem', color: '#6e6e73' }}>
@@ -660,7 +622,6 @@ export default function Products() {
                         ) : category === 'All' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
 
-                                {/* Fix 2: The Latest — 7 products, no View All button */}
                                 <CarouselSection
                                     title="The latest."
                                     subtitle="Take a look at what's new!"
@@ -672,7 +633,6 @@ export default function Products() {
                                     ))}
                                 />
 
-                                {/* Accessories */}
                                 {latestAccessories.length > 0 && (
                                     <CarouselSection
                                         title="Accessories."
@@ -693,7 +653,6 @@ export default function Products() {
                                     />
                                 )}
 
-                                {/* Audio */}
                                 {latestAudio.length > 0 && (
                                     <CarouselSection
                                         title="Loud and clear."
