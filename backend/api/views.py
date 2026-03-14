@@ -36,40 +36,79 @@ class RegisterView(APIView):
 
     def post(self, request):
         s = RegisterSerializer(data=request.data)
-        if s.is_valid():
+        if not s.is_valid():
+            return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
             user    = s.save()
             refresh = RefreshToken.for_user(user)
             return Response({
                 'user':   UserSerializer(user).data,
-                'tokens': {'access': str(refresh.access_token), 'refresh': str(refresh)}
+                'tokens': {
+                    'access':  str(refresh.access_token),
+                    'refresh': str(refresh),
+                }
             }, status=status.HTTP_201_CREATED)
-        return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'detail': f'Registration failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email    = request.data.get('email', '')
+        email    = request.data.get('email', '').strip().lower()
         password = request.data.get('password', '')
-        user     = authenticate(request, email=email, password=password)
-        if not user:
-            return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'user':   UserSerializer(user).data,
-            'tokens': {'access': str(refresh.access_token), 'refresh': str(refresh)}
-        })
+
+        if not email or not password:
+            return Response(
+                {'detail': 'Email and password are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = authenticate(request, email=email, password=password)
+            if not user:
+                return Response(
+                    {'detail': 'Invalid credentials. Please check your email and password.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            if not user.is_active:
+                return Response(
+                    {'detail': 'This account has been deactivated.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'user':   UserSerializer(user).data,
+                'tokens': {
+                    'access':  str(refresh.access_token),
+                    'refresh': str(refresh),
+                }
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'detail': f'Login error: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class LogoutView(APIView):
     def post(self, request):
         try:
-            token = RefreshToken(request.data['refresh'])
+            token = RefreshToken(request.data.get('refresh', ''))
             token.blacklist()
-            return Response({'detail': 'Logged out'})
-        except Exception:
-            return Response({'detail': 'Error'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Logged out successfully.'})
+        except Exception as e:
+            # Still return 200 — client should clear tokens regardless
+            return Response({'detail': 'Logged out (token may already be expired).'})
 
 
 class ProfileView(APIView):
@@ -350,11 +389,9 @@ class ReviewDetailView(APIView):
         try:    review = Review.objects.get(id=review_id)
         except: return Response({'detail': 'Review not found'}, status=404)
 
-        # Ownership check
         if review.user_id != request.user.id:
             return Response({'detail': 'Not your review'}, status=403)
 
-        # One-edit limit
         if review.edit_count >= 1:
             return Response({'detail': 'Reviews can only be edited once.'}, status=400)
 
@@ -366,7 +403,6 @@ class ReviewDetailView(APIView):
         if 'rating' in d: review.rating = d['rating']
         if 'body'   in d: review.body   = d['body']
 
-        # Handle image replacement (upload new ones if provided)
         new_images = []
         has_new_images = any(f'image_{i}' in request.FILES for i in range(3))
         if has_new_images:
@@ -459,48 +495,44 @@ class DashboardView(APIView):
         )
         recent_orders = list(Order.objects.order_by('-created_at')[:5])
 
-        # Aggregate order counts by status
         orders = Order.objects.all()
         orders_by_status = {}
         for o in orders:
             orders_by_status[o.status] = orders_by_status.get(o.status, 0) + 1
 
-        # Aggregate product counts by category
         products = Product.objects.all()
         products_by_category = {}
         for p in products:
             products_by_category[p.category] = products_by_category.get(p.category, 0) + 1
 
-        # Aggregate orders by category (based on items in orders)
         orders_by_product_category = {}
         for order in orders:
             for item in order.items:
                 try:
-                    product = Product.objects.get(id=item.product_id)
+                    product  = Product.objects.get(id=item.product_id)
                     category = product.category
                     orders_by_product_category[category] = orders_by_product_category.get(category, 0) + item.quantity
                 except:
                     pass
 
-        # Aggregate sales by category
         sales_by_category = {}
         for order in orders:
             for item in order.items:
                 try:
-                    product = Product.objects.get(id=item.product_id)
+                    product  = Product.objects.get(id=item.product_id)
                     category = product.category
                     sales_by_category[category] = sales_by_category.get(category, 0) + float(item.price_at_purchase) * item.quantity
                 except:
                     pass
 
         return Response({
-            'total_products':           products.count(),
-            'total_orders':             orders.count(),
-            'total_sales':              float(total_sales),
-            'total_customers':          User.objects.filter(role='customer').count(),
-            'recent_orders':            [serialize_order(o) for o in recent_orders],
-            'orders_by_status':         orders_by_status,
-            'products_by_category':     products_by_category,
-            'orders_by_product_category': orders_by_product_category,
-            'sales_by_category':        {k: float(v) for k, v in sales_by_category.items()},
+            'total_products':               products.count(),
+            'total_orders':                 orders.count(),
+            'total_sales':                  float(total_sales),
+            'total_customers':              User.objects.filter(role='customer').count(),
+            'recent_orders':                [serialize_order(o) for o in recent_orders],
+            'orders_by_status':             orders_by_status,
+            'products_by_category':         products_by_category,
+            'orders_by_product_category':   orders_by_product_category,
+            'sales_by_category':            {k: float(v) for k, v in sales_by_category.items()},
         })

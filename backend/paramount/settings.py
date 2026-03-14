@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-import mongoengine
 from dotenv import load_dotenv
 
 # ── Load .env variables ─────────────────────────────────────
@@ -63,7 +62,13 @@ TEMPLATES = [{
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 if DATABASE_URL:
     import dj_database_url
-    DATABASES = {'default': dj_database_url.parse(DATABASE_URL)}
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,        # keep connections alive for 10 min
+            conn_health_checks=True, # drop stale connections automatically
+        )
+    }
 else:
     DATABASES = {
         'default': {
@@ -73,12 +78,13 @@ else:
     }
 
 # ── MongoDB ───────────────────────────────────────────────
+# Connection is established lazily in api/apps.py ApiConfig.ready()
 MONGODB_URI = os.getenv('MONGODB_URI', '')
 
 # ── Cloudinary ────────────────────────────────────────────
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', ''),
-    'API_KEY': os.getenv('CLOUDINARY_API_KEY', ''),
+    'API_KEY':    os.getenv('CLOUDINARY_API_KEY', ''),
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', ''),
 }
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
@@ -92,15 +98,20 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    # Return proper JSON errors instead of HTML 500 pages
+    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
 }
 
 # ── JWT ───────────────────────────────────────────────────
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME':  timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
+    'ROTATE_REFRESH_TOKENS':  True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+    # Needed so simplejwt can find your custom User model
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
 }
 
 # ── CORS ──────────────────────────────────────────────────
@@ -110,12 +121,13 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 ).split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# ── Other settings ───────────────────────────────────────
+# ── Auth & misc ───────────────────────────────────────────
 AUTH_USER_MODEL = 'api.User'
-STATIC_URL = '/static/'
+STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE     = 'UTC'
 USE_I18N = True
-USE_TZ = True
+USE_TZ   = True
