@@ -24,6 +24,17 @@ cloudinary.config(
 )
 
 
+def _mutable_data(request_data):
+    """
+    Safely convert a Django QueryDict (multipart/form-data) or plain dict
+    into a regular mutable dict so that spreading with ** works correctly
+    and single-value fields aren't wrapped in lists.
+    """
+    if hasattr(request_data, 'dict'):
+        return request_data.dict()
+    return dict(request_data)
+
+
 class IsAdminUser(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'admin'
@@ -372,9 +383,14 @@ class ProductReviewsView(APIView):
         return Response({'reviews': data, 'total': total, 'average': avg, 'distribution': dist})
 
     def post(self, request, product_id):
-        s = CreateReviewSerializer(data={**request.data, 'product_id': product_id})
+        # ── FIX: QueryDict spreads values as lists; .dict() unwraps them ──
+        data = _mutable_data(request.data)
+        data['product_id'] = product_id
+
+        s = CreateReviewSerializer(data=data)
         if not s.is_valid():
             return Response(s.errors, status=400)
+
         d = s.validated_data
         try:    order = Order.objects.get(id=d['order_id'])
         except: return Response({'detail': 'Order not found'}, status=404)
@@ -390,6 +406,7 @@ class ProductReviewsView(APIView):
         ).first()
         if existing:
             return Response({'detail': 'Already reviewed'}, status=400)
+
         image_urls = []
         for key in ['image_0', 'image_1', 'image_2']:
             if key in request.FILES:
@@ -398,6 +415,7 @@ class ProductReviewsView(APIView):
                     image_urls.append(result.get('secure_url', ''))
                 except Exception as e:
                     print(f"Review image upload warning: {e}")
+
         review = Review(
             product_id = product_id,
             user_id    = request.user.id,
@@ -429,12 +447,16 @@ class ReviewDetailView(APIView):
             return Response({'detail': 'Not your review'}, status=403)
         if review.edit_count >= 1:
             return Response({'detail': 'Reviews can only be edited once.'}, status=400)
-        s = EditReviewSerializer(data=request.data)
+
+        # ── FIX: same QueryDict unwrap needed for multipart edit submissions ──
+        s = EditReviewSerializer(data=_mutable_data(request.data))
         if not s.is_valid():
             return Response(s.errors, status=400)
+
         d = s.validated_data
         if 'rating' in d: review.rating = d['rating']
         if 'body'   in d: review.body   = d['body']
+
         new_images     = []
         has_new_images = any(f'image_{i}' in request.FILES for i in range(3))
         if has_new_images:
@@ -446,6 +468,7 @@ class ReviewDetailView(APIView):
                     except Exception as e:
                         print(f"Review edit image warning: {e}")
             review.image_urls = new_images
+
         review.edit_count = 1
         review.is_edited  = True
         review.edited_at  = datetime.utcnow()
