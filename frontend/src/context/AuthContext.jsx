@@ -18,7 +18,6 @@ export function AuthProvider({ children }) {
                 const { data } = await getProfile()
                 setUser(data)
             } catch (err) {
-                // Clear on ANY error — expired token, network issue, 500, etc.
                 localStorage.removeItem('access_token')
                 localStorage.removeItem('refresh_token')
                 localStorage.removeItem('user')
@@ -28,7 +27,6 @@ export function AuthProvider({ children }) {
             }
         }
 
-        // Timeout so a slow/dead backend never hangs the UI forever
         const timeout = setTimeout(() => {
             setLoading(false)
         }, 8000)
@@ -37,8 +35,6 @@ export function AuthProvider({ children }) {
     }, [])
 
     const loginUser = async (email, password) => {
-        // Clear any stale tokens BEFORE the login request so the interceptor
-        // never attaches a dead Bearer token to the login call
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('user')
@@ -52,7 +48,6 @@ export function AuthProvider({ children }) {
     }
 
     const registerUser = async (name, email, password, confirm_password) => {
-        // Same safety clear for register
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('user')
@@ -79,29 +74,11 @@ export function AuthProvider({ children }) {
         }
     }
 
-    if (loading) return (
-        <div style={{
-            minHeight: '100vh',
-            background: '#f5f5f7',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            gap: '16px',
-        }}>
-            <div style={{
-                width: '36px', height: '36px',
-                border: '3px solid #d2d2d7',
-                borderTop: '3px solid #0066cc',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-            }} />
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        </div>
-    )
+    // Remove the loading spinner block — let routes handle loading state
+    // This prevents the whole app from being blocked during token validation
 
     return (
-        <AuthContext.Provider value={{ user, loginUser, registerUser, logoutUser }}>
+        <AuthContext.Provider value={{ user, loading, loginUser, registerUser, logoutUser }}>
             {children}
         </AuthContext.Provider>
     )

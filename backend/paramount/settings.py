@@ -72,6 +72,10 @@ else:
         }
     }
 
+AUTHENTICATION_BACKENDS = [
+    'api.backends.EmailBackend',
+]
+
 MONGODB_URI = os.getenv('MONGODB_URI', '')
 
 CLOUDINARY_STORAGE = {
