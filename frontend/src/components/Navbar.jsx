@@ -2,17 +2,20 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { useSaves } from '../context/SavesContext'
 import toast from 'react-hot-toast'
-import { Search, ShoppingBag, Package, Heart, User, LogOut, Settings, Menu, X } from 'lucide-react'
+import { Search, ShoppingBag, Package, Heart, User, LogOut, Settings, Menu, X, Trash2 } from 'lucide-react'
 
 export default function Navbar() {
     const { user, logoutUser } = useAuth()
     const { count } = useCart()
+    const { saves, unsaveProduct } = useSaves()
     const navigate = useNavigate()
     const [bagOpen, setBagOpen] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
     const [searchOpen, setSearchOpen] = useState(false)
     const [searchValue, setSearchValue] = useState('')
+    const [savesExpanded, setSavesExpanded] = useState(false)
     const bagRef = useRef(null)
     const searchRef = useRef(null)
     const searchInputRef = useRef(null)
@@ -65,6 +68,11 @@ export default function Navbar() {
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     }, [])
+
+    // Reset saves section when bag closes
+    useEffect(() => {
+        if (!bagOpen) setSavesExpanded(false)
+    }, [bagOpen])
 
     const nav = {
         background: '#fff',
@@ -162,6 +170,37 @@ export default function Navbar() {
                     background: #e8e8ed;
                     margin: 8px 22px;
                 }
+                .saves-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 8px 0;
+                    border-bottom: 1px solid #f5f5f7;
+                    transition: background 0.1s;
+                }
+                .saves-item:last-child {
+                    border-bottom: none;
+                }
+                .saves-remove-btn {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: #c0392b;
+                    padding: 4px;
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                    opacity: 0;
+                    transition: opacity 0.15s, background 0.15s;
+                    flex-shrink: 0;
+                    margin-left: auto;
+                }
+                .saves-item:hover .saves-remove-btn {
+                    opacity: 1;
+                }
+                .saves-remove-btn:hover {
+                    background: rgba(192,57,43,0.08);
+                }
                 @media (max-width: 768px) {
                     .nav-links-desktop { display: none !important; }
                     .nav-hamburger { display: flex !important; }
@@ -252,7 +291,6 @@ export default function Navbar() {
                         </button>
 
                         {user?.role !== 'admin' && (
-                            // ✅ FIX: bagRef now wraps BOTH the button and the dropdown
                             <div ref={bagRef} style={{ position: 'relative' }}>
                                 <button
                                     style={{ ...link, background: 'none', border: 'none', cursor: 'pointer', position: 'relative', padding: 0 }}
@@ -278,7 +316,7 @@ export default function Navbar() {
                                         position: 'absolute',
                                         top: '34px',
                                         right: '-30px',
-                                        width: 'min(280px, calc(100vw - 32px))',
+                                        width: 'min(320px, calc(100vw - 32px))',
                                         background: '#fff',
                                         borderRadius: '18px',
                                         border: '1px solid #d2d2d7',
@@ -287,7 +325,10 @@ export default function Navbar() {
                                         zIndex: 101,
                                         textAlign: 'left',
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                                        maxHeight: '80vh',
+                                        overflowY: 'auto',
                                     }}>
+                                        {/* Bag section */}
                                         <h4 style={{ color: '#6e6e73', fontSize: '14px', fontWeight: '600', marginBottom: '16px', marginTop: 0 }}>
                                             {count === 0 ? 'Your Bag is empty.' : `${count} item${count > 1 ? 's' : ''} in your bag`}
                                         </h4>
@@ -310,14 +351,162 @@ export default function Navbar() {
                                             </div>
                                         )}
 
+                                        {/* Your Saves section */}
+                                        <div style={{ borderTop: '1px solid #e8e8ed', paddingTop: '16px', marginBottom: '16px' }}>
+                                            <button
+                                                onClick={() => setSavesExpanded(e => !e)}
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: 0,
+                                                    marginBottom: savesExpanded ? '12px' : 0,
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <Heart size={13} color={saves.length > 0 ? '#e05b5b' : '#8f8f94'} fill={saves.length > 0 ? '#e05b5b' : 'none'} />
+                                                    <span style={{ color: '#6e6e73', fontSize: '12px', fontWeight: '600' }}>
+                                                        Your Saves
+                                                    </span>
+                                                    {saves.length > 0 && (
+                                                        <span style={{
+                                                            background: 'rgba(224,91,91,0.12)',
+                                                            color: '#e05b5b',
+                                                            fontSize: '10px',
+                                                            fontWeight: '700',
+                                                            borderRadius: '10px',
+                                                            padding: '1px 6px',
+                                                            border: '1px solid rgba(224,91,91,0.2)',
+                                                        }}>
+                                                            {saves.length}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <svg
+                                                    width="12" height="12" viewBox="0 0 12 12"
+                                                    style={{
+                                                        transform: savesExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                        transition: 'transform 0.2s ease',
+                                                        color: '#8f8f94',
+                                                    }}
+                                                    fill="none"
+                                                >
+                                                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </button>
+
+                                            {savesExpanded && (
+                                                <div>
+                                                    {!user ? (
+                                                        /* Guest: prompt to sign in */
+                                                        <div style={{
+                                                            background: '#f5f5f7',
+                                                            borderRadius: '10px',
+                                                            padding: '14px',
+                                                            textAlign: 'center',
+                                                            border: '1px solid #e8e8ed',
+                                                        }}>
+                                                            <Heart size={20} color='#d2d2d7' style={{ marginBottom: '8px' }} />
+                                                            <p style={{ color: '#6e6e73', fontSize: '12px', marginBottom: '10px', lineHeight: '1.4' }}>
+                                                                Sign in to save your favourite products
+                                                            </p>
+                                                            <Link
+                                                                to="/login"
+                                                                onClick={() => setBagOpen(false)}
+                                                                style={{
+                                                                    display: 'inline-block',
+                                                                    background: '#0066cc',
+                                                                    color: '#fff',
+                                                                    borderRadius: '8px',
+                                                                    padding: '7px 16px',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '700',
+                                                                    textDecoration: 'none',
+                                                                }}
+                                                            >
+                                                                Sign In
+                                                            </Link>
+                                                        </div>
+                                                    ) : saves.length === 0 ? (
+                                                        /* Logged in, nothing saved */
+                                                        <div style={{
+                                                            background: '#f5f5f7',
+                                                            borderRadius: '10px',
+                                                            padding: '14px',
+                                                            textAlign: 'center',
+                                                            border: '1px solid #e8e8ed',
+                                                        }}>
+                                                            <Heart size={20} color='#d2d2d7' style={{ marginBottom: '6px' }} />
+                                                            <p style={{ color: '#8f8f94', fontSize: '12px', lineHeight: '1.4' }}>
+                                                                No saved items yet.<br />Tap ♥ on a product to save it.
+                                                            </p>
+                                                        </div>
+                                                    ) : (
+                                                        /* Saved items list */
+                                                        <div>
+                                                            {saves.map(product => (
+                                                                <div key={product.id} className="saves-item">
+                                                                    <img
+                                                                        src={product.image_url || 'https://via.placeholder.com/36'}
+                                                                        alt={product.name}
+                                                                        style={{
+                                                                            width: '36px',
+                                                                            height: '36px',
+                                                                            objectFit: 'contain',
+                                                                            borderRadius: '6px',
+                                                                            background: '#f5f5f7',
+                                                                            flexShrink: 0,
+                                                                            border: '1px solid #e8e8ed',
+                                                                        }}
+                                                                    />
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <Link
+                                                                            to={`/products/${product.id}`}
+                                                                            onClick={() => setBagOpen(false)}
+                                                                            style={{
+                                                                                color: '#111',
+                                                                                fontSize: '12px',
+                                                                                fontWeight: '600',
+                                                                                textDecoration: 'none',
+                                                                                display: 'block',
+                                                                                whiteSpace: 'nowrap',
+                                                                                overflow: 'hidden',
+                                                                                textOverflow: 'ellipsis',
+                                                                                lineHeight: '1.3',
+                                                                                marginBottom: '2px',
+                                                                            }}
+                                                                        >
+                                                                            {product.name}
+                                                                        </Link>
+                                                                        <span style={{ color: '#0066cc', fontSize: '11px', fontWeight: '600' }}>
+                                                                            ₱{parseFloat(product.price).toLocaleString()}
+                                                                        </span>
+                                                                    </div>
+                                                                    <button
+                                                                        className="saves-remove-btn"
+                                                                        onClick={() => unsaveProduct(product.id)}
+                                                                        title="Remove from saves"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* My Profile section */}
                                         <div style={{ borderTop: '1px solid #e8e8ed', paddingTop: '16px' }}>
                                             <h5 style={{ color: '#6e6e73', fontSize: '12px', fontWeight: '600', marginBottom: '12px', marginTop: 0 }}>My Profile</h5>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                 <Link to="/orders" onClick={() => setBagOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111', textDecoration: 'none', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}>
                                                     <Package size={14} color="#8f8f94" /> Orders
-                                                </Link>
-                                                <Link to="/orders" onClick={() => setBagOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111', textDecoration: 'none', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}>
-                                                    <Heart size={14} color="#8f8f94" /> Your Saves
                                                 </Link>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}>
                                                     <User size={14} color="#8f8f94" /> Account

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
+import { SavesProvider } from './context/SavesContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -50,8 +51,10 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <Toaster position="top-right" toastOptions={{ style: { background: '#111118', color: '#e2e8f0', border: '1px solid #1e1e2e' } }} />
-          <AppLayout />
+          <SavesProvider>
+            <Toaster position="top-right" toastOptions={{ style: { background: '#111118', color: '#e2e8f0', border: '1px solid #1e1e2e' } }} />
+            <AppLayout />
+          </SavesProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

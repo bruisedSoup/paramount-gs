@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getProduct, getProductReviews, getProductUpdates, commentOnUpdate, editReview } from '../services/api'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { useSaves } from '../context/SavesContext'
 import toast from 'react-hot-toast'
-import { Star, MessageCircle, ChevronDown, ChevronUp, Send, Pencil, X, ImagePlus, Info } from 'lucide-react'
+import { Star, MessageCircle, ChevronDown, ChevronUp, Send, Pencil, X, ImagePlus, Info, Heart } from 'lucide-react'
 import AuthPromptModal from '../components/modals/AuthPromptModal'
+import SavePromptModal from '../components/modals/SavePromptModal'
 
 // ── Theme tokens ──────────────────────────────────────────
 const T = {
@@ -20,6 +22,7 @@ const T = {
     gold: '#f59e0b',
     green: '#1d8348',
     red: '#c0392b',
+    heartRed: '#e05b5b',
     cardShadow: '0 2px 16px rgba(0,0,0,0.08)',
 }
 
@@ -307,6 +310,60 @@ function UpdateCard({ update, user }) {
     )
 }
 
+// ── Save Button ───────────────────────────────────────────
+function SaveButton({ product, user, onGuestSave }) {
+    const { isSaved, saveProduct, unsaveProduct } = useSaves()
+    const saved = isSaved(product.id)
+    const [hovered, setHovered] = useState(false)
+
+    const handleClick = () => {
+        if (!user) {
+            onGuestSave()
+            return
+        }
+        if (saved) {
+            unsaveProduct(product.id)
+            toast.success('Removed from saves')
+        } else {
+            saveProduct(product)
+            toast.success('Saved! Find it in your bag ♥')
+        }
+    }
+
+    return (
+        <button
+            onClick={handleClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            title={saved ? 'Remove from saves' : 'Save this product'}
+            style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                border: saved
+                    ? '1.5px solid rgba(224,91,91,0.4)'
+                    : `1.5px solid ${hovered ? 'rgba(224,91,91,0.4)' : T.border}`,
+                background: saved
+                    ? 'rgba(224,91,91,0.08)'
+                    : hovered ? 'rgba(224,91,91,0.05)' : T.card,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+            }}
+        >
+            <Heart
+                size={20}
+                color={saved || hovered ? '#e05b5b' : T.muted}
+                fill={saved ? '#e05b5b' : 'none'}
+                style={{ transition: 'all 0.2s ease' }}
+            />
+        </button>
+    )
+}
+
 // ── Main ──────────────────────────────────────────────────
 export default function ProductDetail() {
     const { id } = useParams()
@@ -316,6 +373,7 @@ export default function ProductDetail() {
     const [updates, setUpdates] = useState([])
     const [section, setSection] = useState('reviews')
     const [showAuthModal, setShowAuthModal] = useState(false)
+    const [showSaveModal, setShowSaveModal] = useState(false)
     const { addToCart } = useCart()
     const { user } = useAuth()
     const navigate = useNavigate()
@@ -421,7 +479,7 @@ export default function ProductDetail() {
 
                         {product.stock > 0 && (
                             <>
-                                {user && (
+                                {user && user.role !== 'admin' && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                                         <label style={{ color: T.muted, fontSize: '13px', fontWeight: '700' }}>QTY</label>
                                         <div style={{ display: 'flex', alignItems: 'center', background: T.card, border: `1px solid ${T.border}`, borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
@@ -431,27 +489,68 @@ export default function ProductDetail() {
                                         </div>
                                     </div>
                                 )}
-                                <button
-                                    onClick={handleAddToCart}
-                                    style={{
-                                        width: '100%',
-                                        background: T.accent,
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '12px',
-                                        padding: '15px',
-                                        fontWeight: '700',
-                                        fontSize: '16px',
-                                        cursor: 'pointer',
-                                        letterSpacing: '-0.01em',
-                                        transition: 'background 0.15s ease',
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.background = T.accentHover}
-                                    onMouseLeave={e => e.currentTarget.style.background = T.accent}
-                                >
-                                    {user ? 'Add to Cart' : '🛒 Add to Cart'}
-                                </button>
+
+                                {/* Add to Cart + Save button row — hidden for admin */}
+                                {user?.role !== 'admin' && (
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
+                                        <button
+                                            onClick={handleAddToCart}
+                                            style={{
+                                                flex: 1,
+                                                background: T.accent,
+                                                color: '#fff',
+                                                border: 'none',
+                                                borderRadius: '12px',
+                                                padding: '15px',
+                                                fontWeight: '700',
+                                                fontSize: '16px',
+                                                cursor: 'pointer',
+                                                letterSpacing: '-0.01em',
+                                                transition: 'background 0.15s ease',
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.background = T.accentHover}
+                                            onMouseLeave={e => e.currentTarget.style.background = T.accent}
+                                        >
+                                            {user ? 'Add to Cart' : '🛒 Add to Cart'}
+                                        </button>
+
+                                        {/* Save button — visible to everyone except admin */}
+                                        <SaveButton
+                                            product={product}
+                                            user={user}
+                                            onGuestSave={() => setShowSaveModal(true)}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Guest hint below buttons */}
+                                {!user && (
+                                    <p style={{ color: T.muted, fontSize: '12px', marginTop: '4px' }}>
+                                        <Heart size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                        <span
+                                            onClick={() => setShowSaveModal(true)}
+                                            style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline' }}
+                                        >
+                                            Sign in
+                                        </span>
+                                        {' '}to save this product
+                                    </p>
+                                )}
                             </>
+                        )}
+
+                        {/* Out of stock: still show save button for non-admins */}
+                        {product.stock === 0 && user?.role !== 'admin' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                                <SaveButton
+                                    product={product}
+                                    user={user}
+                                    onGuestSave={() => setShowSaveModal(true)}
+                                />
+                                <span style={{ color: T.muted, fontSize: '13px' }}>
+                                    Save for when it's back in stock
+                                </span>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -519,6 +618,7 @@ export default function ProductDetail() {
                 )}
 
                 {showAuthModal && <AuthPromptModal onClose={() => setShowAuthModal(false)} />}
+                {showSaveModal && <SavePromptModal onClose={() => setShowSaveModal(false)} />}
             </div>
         </div>
     )
