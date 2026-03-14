@@ -78,7 +78,7 @@ export default function Navbar() {
         zIndex: 100,
         width: '100%',
         boxSizing: 'border-box',
-        overflow: 'hidden',
+        overflow: 'visible',
     }
 
     const containerStyle = {
