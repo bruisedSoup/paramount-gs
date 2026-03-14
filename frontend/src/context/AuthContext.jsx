@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
             }
         }
 
-        // Add a timeout so a slow/dead backend never hangs the UI forever
+        // Timeout so a slow/dead backend never hangs the UI forever
         const timeout = setTimeout(() => {
             setLoading(false)
         }, 8000)
@@ -37,6 +37,12 @@ export function AuthProvider({ children }) {
     }, [])
 
     const loginUser = async (email, password) => {
+        // Clear any stale tokens BEFORE the login request so the interceptor
+        // never attaches a dead Bearer token to the login call
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        localStorage.removeItem('user')
+
         const { data } = await apiLogin({ email, password })
         localStorage.setItem('access_token', data.tokens.access)
         localStorage.setItem('refresh_token', data.tokens.refresh)
@@ -46,6 +52,11 @@ export function AuthProvider({ children }) {
     }
 
     const registerUser = async (name, email, password, confirm_password) => {
+        // Same safety clear for register
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        localStorage.removeItem('user')
+
         const { data } = await apiRegister({ name, email, password, confirm_password })
         localStorage.setItem('access_token', data.tokens.access)
         localStorage.setItem('refresh_token', data.tokens.refresh)
