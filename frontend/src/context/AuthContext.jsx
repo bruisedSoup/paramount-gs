@@ -5,7 +5,7 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
-    const [loading, setLoading] = useState(true)  // ← add loading state
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const validateToken = async () => {
@@ -15,18 +15,25 @@ export function AuthProvider({ children }) {
                 return
             }
             try {
-                // Verify token is still valid by hitting the profile endpoint
                 const { data } = await getProfile()
                 setUser(data)
-            } catch {
-                // Token is expired or invalid — clear everything
-                localStorage.clear()
+            } catch (err) {
+                // Clear on ANY error — expired token, network issue, 500, etc.
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('refresh_token')
+                localStorage.removeItem('user')
                 setUser(null)
             } finally {
                 setLoading(false)
             }
         }
-        validateToken()
+
+        // Add a timeout so a slow/dead backend never hangs the UI forever
+        const timeout = setTimeout(() => {
+            setLoading(false)
+        }, 8000)
+
+        validateToken().finally(() => clearTimeout(timeout))
     }, [])
 
     const loginUser = async (email, password) => {
@@ -51,16 +58,33 @@ export function AuthProvider({ children }) {
         try {
             const refresh = localStorage.getItem('refresh_token')
             if (refresh) await apiLogout(refresh)
+        } catch {
+            // ignore logout errors
         } finally {
-            localStorage.clear()
+            localStorage.removeItem('access_token')
+            localStorage.removeItem('refresh_token')
+            localStorage.removeItem('user')
             setUser(null)
         }
     }
 
-    // Don't render anything until we know if the user is logged in or not
     if (loading) return (
-        <div style={{ minHeight: '100vh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '36px', height: '36px', border: '3px solid #d2d2d7', borderTop: '3px solid #0066cc', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <div style={{
+            minHeight: '100vh',
+            background: '#f5f5f7',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: '16px',
+        }}>
+            <div style={{
+                width: '36px', height: '36px',
+                border: '3px solid #d2d2d7',
+                borderTop: '3px solid #0066cc',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+            }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
     )
