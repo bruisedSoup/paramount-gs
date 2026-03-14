@@ -189,17 +189,45 @@ function EditReviewModal({ review, onClose, onSaved }) {
 }
 
 // ── Review Card ───────────────────────────────────────────
-function ReviewCard({ review, isOwn, canEdit, onEditSaved }) {
+function ReviewCard({ review, isOwn, canEdit, onEditSaved, isHighlighted }) {
+    const cardRef = useRef(null)
     const [showEdit, setShowEdit] = useState(false)
+
+    // Scroll into view and flash if this card is the anchor target
+    useEffect(() => {
+        if (isHighlighted && cardRef.current) {
+            // Small delay so the page finishes rendering before scrolling
+            setTimeout(() => {
+                cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }, 400)
+        }
+    }, [isHighlighted])
 
     return (
         <>
-            <div style={{ background: isOwn ? 'rgba(0,102,204,0.04)' : T.card, border: isOwn ? `1px solid rgba(0,102,204,0.2)` : `1px solid ${T.border}`, borderRadius: '12px', padding: '16px', marginBottom: '12px', boxShadow: T.cardShadow }}>
+            <div
+                id={`review-${review.id}`}
+                ref={cardRef}
+                style={{
+                    background: isHighlighted
+                        ? 'rgba(0,102,204,0.05)'
+                        : isOwn ? 'rgba(0,102,204,0.04)' : T.card,
+                    border: isHighlighted
+                        ? `2px solid ${T.accent}`
+                        : isOwn ? `1px solid rgba(0,102,204,0.2)` : `1px solid ${T.border}`,
+                    borderRadius: '12px',
+                    padding: '16px',
+                    marginBottom: '12px',
+                    boxShadow: isHighlighted ? `0 0 0 4px rgba(0,102,204,0.08)` : T.cardShadow,
+                    transition: 'box-shadow 0.3s, border-color 0.3s',
+                }}
+            >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                             <p style={{ color: T.text, fontWeight: '700', fontSize: '14px' }}>{review.user_name}</p>
                             {isOwn && <span style={{ background: 'rgba(0,102,204,0.1)', color: T.accent, fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '4px' }}>YOU</span>}
+                            {isHighlighted && <span style={{ background: 'rgba(0,102,204,0.12)', color: T.accent, fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '4px' }}>↑ Your review</span>}
                             {review.is_edited && <span style={{ color: T.muted, fontSize: '11px' }}>(edited)</span>}
                         </div>
                         <p style={{ color: T.muted, fontSize: '11px' }}>
@@ -317,17 +345,9 @@ function SaveButton({ product, user, onGuestSave }) {
     const [hovered, setHovered] = useState(false)
 
     const handleClick = () => {
-        if (!user) {
-            onGuestSave()
-            return
-        }
-        if (saved) {
-            unsaveProduct(product.id)
-            toast.success('Removed from saves')
-        } else {
-            saveProduct(product)
-            toast.success('Saved! Find it in your bag ♥')
-        }
+        if (!user) { onGuestSave(); return }
+        if (saved) { unsaveProduct(product.id); toast.success('Removed from saves') }
+        else { saveProduct(product); toast.success('Saved! Find it in your bag ♥') }
     }
 
     return (
@@ -337,29 +357,14 @@ function SaveButton({ product, user, onGuestSave }) {
             onMouseLeave={() => setHovered(false)}
             title={saved ? 'Remove from saves' : 'Save this product'}
             style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                border: saved
-                    ? '1.5px solid rgba(224,91,91,0.4)'
-                    : `1.5px solid ${hovered ? 'rgba(224,91,91,0.4)' : T.border}`,
-                background: saved
-                    ? 'rgba(224,91,91,0.08)'
-                    : hovered ? 'rgba(224,91,91,0.05)' : T.card,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
+                width: '48px', height: '48px', borderRadius: '12px',
+                border: saved ? '1.5px solid rgba(224,91,91,0.4)' : `1.5px solid ${hovered ? 'rgba(224,91,91,0.4)' : T.border}`,
+                background: saved ? 'rgba(224,91,91,0.08)' : hovered ? 'rgba(224,91,91,0.05)' : T.card,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s ease', flexShrink: 0,
             }}
         >
-            <Heart
-                size={20}
-                color={saved || hovered ? '#e05b5b' : T.muted}
-                fill={saved ? '#e05b5b' : 'none'}
-                style={{ transition: 'all 0.2s ease' }}
-            />
+            <Heart size={20} color={saved || hovered ? '#e05b5b' : T.muted} fill={saved ? '#e05b5b' : 'none'} style={{ transition: 'all 0.2s ease' }} />
         </button>
     )
 }
@@ -377,6 +382,18 @@ export default function ProductDetail() {
     const { addToCart } = useCart()
     const { user } = useAuth()
     const navigate = useNavigate()
+
+    // The review ID to highlight, parsed from the URL hash (#review-<id>)
+    const [highlightedReviewId, setHighlightedReviewId] = useState(null)
+
+    useEffect(() => {
+        const hash = window.location.hash // e.g. "#review-abc123"
+        if (hash.startsWith('#review-')) {
+            const reviewId = hash.replace('#review-', '')
+            setHighlightedReviewId(reviewId)
+            setSection('reviews') // ensure reviews tab is active
+        }
+    }, [])
 
     useEffect(() => {
         getProduct(id).then(r => setProduct(r.data)).catch(() => navigate('/'))
@@ -425,10 +442,7 @@ export default function ProductDetail() {
                     padding: clamp(1rem, 4vw, 2rem);
                 }
                 @media (max-width: 640px) {
-                    .pd-grid {
-                        grid-template-columns: 1fr;
-                        gap: 1.5rem;
-                    }
+                    .pd-grid { grid-template-columns: 1fr; gap: 1.5rem; }
                 }
             `}</style>
             <div className="pd-container">
@@ -444,7 +458,6 @@ export default function ProductDetail() {
 
                 {/* Product section */}
                 <div className="pd-grid">
-
                     {/* Image */}
                     <div style={{ background: T.card, borderRadius: '18px', padding: '2rem', boxShadow: T.cardShadow, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img
@@ -490,66 +503,34 @@ export default function ProductDetail() {
                                     </div>
                                 )}
 
-                                {/* Add to Cart + Save button row — hidden for admin */}
                                 {user?.role !== 'admin' && (
                                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
                                         <button
                                             onClick={handleAddToCart}
-                                            style={{
-                                                flex: 1,
-                                                background: T.accent,
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: '12px',
-                                                padding: '15px',
-                                                fontWeight: '700',
-                                                fontSize: '16px',
-                                                cursor: 'pointer',
-                                                letterSpacing: '-0.01em',
-                                                transition: 'background 0.15s ease',
-                                            }}
+                                            style={{ flex: 1, background: T.accent, color: '#fff', border: 'none', borderRadius: '12px', padding: '15px', fontWeight: '700', fontSize: '16px', cursor: 'pointer', letterSpacing: '-0.01em', transition: 'background 0.15s ease' }}
                                             onMouseEnter={e => e.currentTarget.style.background = T.accentHover}
                                             onMouseLeave={e => e.currentTarget.style.background = T.accent}
                                         >
                                             {user ? 'Add to Cart' : '🛒 Add to Cart'}
                                         </button>
-
-                                        {/* Save button — visible to everyone except admin */}
-                                        <SaveButton
-                                            product={product}
-                                            user={user}
-                                            onGuestSave={() => setShowSaveModal(true)}
-                                        />
+                                        <SaveButton product={product} user={user} onGuestSave={() => setShowSaveModal(true)} />
                                     </div>
                                 )}
 
-                                {/* Guest hint below buttons */}
                                 {!user && (
                                     <p style={{ color: T.muted, fontSize: '12px', marginTop: '4px' }}>
                                         <Heart size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                                        <span
-                                            onClick={() => setShowSaveModal(true)}
-                                            style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline' }}
-                                        >
-                                            Sign in
-                                        </span>
+                                        <span onClick={() => setShowSaveModal(true)} style={{ color: T.accent, cursor: 'pointer', textDecoration: 'underline' }}>Sign in</span>
                                         {' '}to save this product
                                     </p>
                                 )}
                             </>
                         )}
 
-                        {/* Out of stock: still show save button for non-admins */}
                         {product.stock === 0 && user?.role !== 'admin' && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
-                                <SaveButton
-                                    product={product}
-                                    user={user}
-                                    onGuestSave={() => setShowSaveModal(true)}
-                                />
-                                <span style={{ color: T.muted, fontSize: '13px' }}>
-                                    Save for when it's back in stock
-                                </span>
+                                <SaveButton product={product} user={user} onGuestSave={() => setShowSaveModal(true)} />
+                                <span style={{ color: T.muted, fontSize: '13px' }}>Save for when it's back in stock</span>
                             </div>
                         )}
                     </div>
@@ -563,17 +544,12 @@ export default function ProductDetail() {
                     ].map(tab => (
                         <button key={tab.key} onClick={() => setSection(tab.key)}
                             style={{
-                                background: 'none',
-                                border: 'none',
+                                background: 'none', border: 'none',
                                 borderBottom: section === tab.key ? `2px solid ${T.accent}` : '2px solid transparent',
                                 color: section === tab.key ? T.text : T.muted,
-                                padding: '12px 20px',
-                                cursor: 'pointer',
-                                fontWeight: section === tab.key ? '700' : '500',
-                                fontSize: '14px',
-                                marginBottom: '-1px',
-                                transition: 'all 0.2s',
-                                fontFamily: 'inherit',
+                                padding: '12px 20px', cursor: 'pointer',
+                                fontWeight: section === tab.key ? '700' : '500', fontSize: '14px',
+                                marginBottom: '-1px', transition: 'all 0.2s', fontFamily: 'inherit',
                             }}>
                             {tab.label}
                         </button>
@@ -590,6 +566,7 @@ export default function ProductDetail() {
                                         isOwn={r.user_id === user?.id}
                                         canEdit={r.user_id === user?.id && !r.is_edited}
                                         onEditSaved={handleEditSaved}
+                                        isHighlighted={r.id === highlightedReviewId}
                                     />
                                 ))}
                             </>

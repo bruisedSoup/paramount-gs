@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getOrders, confirmReceived, createReview, getMyReviews } from '../services/api'
-import { Star, Truck, CheckCircle, Clock, Package, ChevronDown, ChevronUp, Send, ImagePlus, X, Eye } from 'lucide-react'
+import { Star, Truck, CheckCircle, Clock, Package, ChevronDown, ChevronUp, Send, ImagePlus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const STATUS_COLORS = {
@@ -46,8 +47,8 @@ function StarDisplay({ value, size = 14 }) {
 function RateModal({ order, item, onClose, onDone }) {
     const [rating, setRating] = useState(0)
     const [body, setBody] = useState('')
-    const [images, setImages] = useState([])   // File[]
-    const [previews, setPreviews] = useState([]) // data URLs
+    const [images, setImages] = useState([])
+    const [previews, setPreviews] = useState([])
     const [loading, setLoading] = useState(false)
     const fileRef = useRef()
 
@@ -118,7 +119,6 @@ function RateModal({ order, item, onClose, onDone }) {
                     style={{ width: '100%', background: '#fff', border: '1px solid #d2d2d7', borderRadius: '8px', padding: '12px', color: '#111', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px', lineHeight: '1.6', fontFamily: 'inherit' }}
                 />
 
-                {/* Image upload */}
                 <div style={{ marginBottom: '20px' }}>
                     <p style={{ color: '#8f8f94', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
                         Add Photos ({images.length}/3)
@@ -159,19 +159,49 @@ function RateModal({ order, item, onClose, onDone }) {
     )
 }
 
-function MyReviewCard({ review }) {
+// ── Clickable review card shown inside the order ──────────
+function MyReviewCard({ review, productId }) {
+    const navigate = useNavigate()
+
+    const handleClick = () => {
+        navigate(`/products/${productId}#review-${review.id}`)
+    }
+
     return (
-        <div style={{ background: '#f5f5f7', border: '1px solid #e8e8ed', borderRadius: '10px', padding: '14px', marginTop: '10px' }}>
+        <div
+            onClick={handleClick}
+            style={{
+                background: '#f5f5f7', border: '1px solid #e8e8ed', borderRadius: '10px',
+                padding: '14px', marginTop: '10px', cursor: 'pointer',
+                transition: 'box-shadow 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={e => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'
+                e.currentTarget.style.borderColor = '#0066cc'
+            }}
+            onMouseLeave={e => {
+                e.currentTarget.style.boxShadow = 'none'
+                e.currentTarget.style.borderColor = '#e8e8ed'
+            }}
+        >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <StarDisplay value={review.rating} size={14} />
-                <span style={{ color: '#8f8f94', fontSize: '11px' }}>{new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                <span style={{ color: '#8f8f94', fontSize: '11px' }}>
+                    {new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
             </div>
-            {review.body && <p style={{ color: '#6e6e73', fontSize: '13px', lineHeight: '1.6', marginBottom: review.image_urls?.length ? '10px' : 0 }}>{review.body}</p>}
+            {review.body && (
+                <p style={{ color: '#6e6e73', fontSize: '13px', lineHeight: '1.6', marginBottom: review.image_urls?.length ? '10px' : 0 }}>
+                    {review.body}
+                </p>
+            )}
             {review.image_urls?.length > 0 && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: review.reply ? '10px' : 0 }}>
                     {review.image_urls.map((url, i) => (
-                        <img key={i} src={url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #d2d2d7', cursor: 'pointer' }}
-                            onClick={() => window.open(url, '_blank')} />
+                        <img key={i} src={url} alt=""
+                            style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #d2d2d7' }}
+                            onClick={e => { e.stopPropagation(); window.open(url, '_blank') }}
+                        />
                     ))}
                 </div>
             )}
@@ -181,11 +211,15 @@ function MyReviewCard({ review }) {
                     <p style={{ color: '#6e6e73', fontSize: '13px', lineHeight: '1.5' }}>{review.reply.body}</p>
                 </div>
             )}
+            <p style={{ color: '#0066cc', fontSize: '11px', fontWeight: '600', marginTop: '8px' }}>
+                View on product page →
+            </p>
         </div>
     )
 }
 
 function OrderCard({ order, myReviews, showReceiveBtn, showRateBtn, onReceived, onRate }) {
+    const navigate = useNavigate()
     const [expanded, setExpanded] = useState(false)
     const [receiving, setReceiving] = useState(false)
 
@@ -235,7 +269,24 @@ function OrderCard({ order, myReviews, showReceiveBtn, showRateBtn, onReceived, 
                     const myReview = reviewMap[item.product_id]
                     return (
                         <div key={idx} style={{ paddingTop: '14px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f5f5f7', borderRadius: '8px', padding: '10px 12px', border: '1px solid #e8e8ed' }}>
+                            {/* Clickable product row → product detail */}
+                            <div
+                                onClick={() => navigate(`/products/${item.product_id}`)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    background: '#f5f5f7', borderRadius: '8px', padding: '10px 12px',
+                                    border: '1px solid #e8e8ed', cursor: 'pointer',
+                                    transition: 'box-shadow 0.15s, border-color 0.15s',
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'
+                                    e.currentTarget.style.borderColor = '#0066cc'
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.boxShadow = 'none'
+                                    e.currentTarget.style.borderColor = '#e8e8ed'
+                                }}
+                            >
                                 <img src={item.product_image || 'https://via.placeholder.com/40'} alt={item.product_name}
                                     style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -248,15 +299,19 @@ function OrderCard({ order, myReviews, showReceiveBtn, showRateBtn, onReceived, 
                                             <Star size={11} fill='#10b981' color='#10b981' /> Reviewed
                                         </span>
                                     ) : showRateBtn ? (
-                                        <button onClick={() => onRate(order, item)}
+                                        <button
+                                            onClick={e => { e.stopPropagation(); onRate(order, item) }}
                                             style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '6px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>
                                             ⭐ Rate
                                         </button>
                                     ) : null}
                                 </div>
                             </div>
-                            {/* Show my review inline */}
-                            {myReview && <MyReviewCard review={myReview} />}
+
+                            {/* Clickable review card → product detail anchored to review */}
+                            {myReview && (
+                                <MyReviewCard review={myReview} productId={item.product_id} />
+                            )}
                         </div>
                     )
                 })}
@@ -387,7 +442,7 @@ export default function OrderHistory() {
                     filtered[activeTab].map(order => (
                         <OrderCard key={order.id} order={order} myReviews={myReviews}
                             showReceiveBtn={order.status === 'shipped'}
-                            showRateBtn={activeTab === 'to_rate'}
+                            showRateBtn={activeTab === 'to_rate' || order.status === 'delivered'}
                             onReceived={load}
                             onRate={(o, item) => setRateModal({ order: o, item })}
                         />
