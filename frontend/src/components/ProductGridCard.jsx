@@ -130,6 +130,8 @@ export default function ProductGridCard({ product }) {
                     <img
                         src={product.image_url || 'https://via.placeholder.com/220x180?text=No+Image'}
                         alt={product.name}
+                        loading="lazy"
+                        decoding="async"
                         style={{
                             width: '100%',
                             maxHeight: 'clamp(100px, 20vw, 160px)',
