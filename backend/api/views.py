@@ -16,6 +16,7 @@ from .serializers import (
 import cloudinary
 import cloudinary.uploader
 from decouple import config
+from django.core.paginator import Paginator
 
 cloudinary.config(
     cloud_name=config('CLOUDINARY_CLOUD_NAME', default=''),
