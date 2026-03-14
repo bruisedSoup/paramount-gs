@@ -5,8 +5,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 const api = axios.create({ baseURL: API_URL })
 
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token')
-    if (token) config.headers.Authorization = `Bearer ${token}`
+    // Do not send Bearer token for login/register — otherwise DRF's JWTAuthentication
+    // validates the (possibly stale) token first and returns 401 before the view runs.
+    const isAuthEndpoint = config.url && (
+        config.url.startsWith('auth/login/') ||
+        config.url.startsWith('auth/register/')
+    )
+    if (!isAuthEndpoint) {
+        const token = localStorage.getItem('access_token')
+        if (token) config.headers.Authorization = `Bearer ${token}`
+    }
     return config
 })
 
