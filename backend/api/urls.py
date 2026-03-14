@@ -10,6 +10,9 @@ urlpatterns = [
     path('auth/refresh/',   TokenRefreshView.as_view()),
     path('auth/profile/',   views.ProfileView.as_view()),
 
+    # ⚠️  TEMPORARY — delete after admin account is created
+    path('setup-admin/',    views.SetupAdminView.as_view()),
+
     # Products
     path('products/',           views.ProductListView.as_view()),
     path('products/<str:pk>/',  views.ProductDetailView.as_view()),
