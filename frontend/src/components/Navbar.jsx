@@ -252,10 +252,11 @@ export default function Navbar() {
                         </button>
 
                         {user?.role !== 'admin' && (
-                            <div ref={bagRef}>
+                            // ✅ FIX: bagRef now wraps BOTH the button and the dropdown
+                            <div ref={bagRef} style={{ position: 'relative' }}>
                                 <button
                                     style={{ ...link, background: 'none', border: 'none', cursor: 'pointer', position: 'relative', padding: 0 }}
-                                    onClick={() => setBagOpen(!bagOpen)}
+                                    onClick={() => setBagOpen(prev => !prev)}
                                 >
                                     <ShoppingBag size={14} style={{ opacity: 0.8 }} />
                                     {count > 0 && (
