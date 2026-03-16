@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext'
 import { useSaves } from '../context/SavesContext'
 import toast from 'react-hot-toast'
 import { Search, ShoppingBag, Package, Heart, User, LogOut, Settings, Menu, X, Trash2 } from 'lucide-react'
+import logoImg from '../../unbox-lab_logo.png'
 
 export default function Navbar() {
     const { user, logoutUser } = useAuth()
@@ -210,7 +211,7 @@ export default function Navbar() {
             <nav style={nav}>
                 <div style={containerStyle}>
                     <Link to="/" style={{ display: 'flex', alignItems: 'center' }} onClick={() => setMenuOpen(false)}>
-                        <img src="/unbox-lab_logo.png" alt="Unbox Lab" style={{ height: '24px' }} />
+                        <img src={logoImg} alt="Unbox Lab" style={{ height: '24px' }} />
                     </Link>
 
                     {!searchOpen && (
