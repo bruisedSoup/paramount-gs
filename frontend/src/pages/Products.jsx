@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, createContext, useContext, useMemo, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getProducts } from '../services/api'
 import { getCached, setCached } from '../services/productCache'
@@ -15,6 +15,102 @@ const PAGE_SIZE = 20
 
 // ─── Carousel Context ────────────────────────────────────────────────────────
 const CarouselContext = createContext({ onCardClose: () => { }, currentIndex: 0 })
+
+// ─── Skeleton Card ────────────────────────────────────────────────────────────
+/**
+ * Matches the exact dimensions of AppleProductCard so layout doesn't shift
+ * when real cards replace skeletons.
+ */
+function SkeletonCard() {
+    return (
+        <div
+            style={{
+                width: 'clamp(260px, 30vw, 412px)',
+                aspectRatio: '4/5',
+                borderRadius: '20px',
+                overflow: 'hidden',
+                flexShrink: 0,
+                background: 'linear-gradient(90deg, #e8e8ed 25%, #f0f0f5 50%, #e8e8ed 75%)',
+                backgroundSize: '200% 100%',
+                animation: 'skeletonShimmer 1.6s ease-in-out infinite',
+                position: 'relative',
+            }}
+        >
+            {/* Bottom content placeholder */}
+            <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+            }}>
+                <div style={{ height: '12px', width: '40%', background: 'rgba(255,255,255,0.35)', borderRadius: '6px' }} />
+                <div style={{ height: '20px', width: '75%', background: 'rgba(255,255,255,0.35)', borderRadius: '6px' }} />
+                <div style={{ height: '16px', width: '50%', background: 'rgba(255,255,255,0.35)', borderRadius: '6px' }} />
+                <div style={{ height: '32px', width: '120px', background: 'rgba(255,255,255,0.25)', borderRadius: '980px', marginTop: '4px' }} />
+            </div>
+        </div>
+    )
+}
+
+// ─── Skeleton Carousel Section ────────────────────────────────────────────────
+function SkeletonCarouselSection({ title, subtitle }) {
+    return (
+        <div>
+            <style>{`
+                @keyframes skeletonShimmer {
+                    0%   { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                }
+                @keyframes skeletonFade {
+                    0%, 100% { opacity: 1; }
+                    50%       { opacity: 0.6; }
+                }
+            `}</style>
+
+            {/* Header */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: '16px',
+                gap: '12px',
+                flexWrap: 'wrap',
+            }}>
+                <h2 style={{
+                    fontSize: 'clamp(16px, 3.5vw, 21px)',
+                    margin: 0,
+                    fontWeight: '700',
+                    color: '#111',
+                }}>
+                    {title}{' '}
+                    <span style={{ color: '#6e6e73', fontWeight: '600', fontSize: 'clamp(12px, 2.5vw, 16px)' }}>
+                        {subtitle}
+                    </span>
+                </h2>
+            </div>
+
+            {/* Skeleton cards row */}
+            <div style={{ display: 'flex', gap: '12px', overflow: 'hidden', paddingBottom: '12px' }}>
+                {[0, 1, 2].map(i => (
+                    <div
+                        key={i}
+                        style={{
+                            flexShrink: 0,
+                            opacity: 1 - i * 0.15,   // gentle fade-out effect on further cards
+                            animation: `skeletonFade ${1.4 + i * 0.2}s ease-in-out infinite`,
+                        }}
+                    >
+                        <SkeletonCard />
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
 
 // ─── Carousel Wrapper ────────────────────────────────────────────────────────
 function ProductCarousel({ items }) {
@@ -152,7 +248,6 @@ function AppleProductCard({ product, index }) {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
 
-                            {/* Modal hero — fixed aspect ratio to prevent layout shift */}
                             <div style={{ background: '#f5f5f7', aspectRatio: '4/3', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                 <img
                                     src={imageUrl}
@@ -187,7 +282,7 @@ function AppleProductCard({ product, index }) {
                 )}
             </AnimatePresence>
 
-            {/* ── Portrait Card — aspect-ratio based, no hardcoded height ── */}
+            {/* ── Portrait Card ── */}
             <motion.div
                 onClick={handleCardClick}
                 whileHover={{ scale: 1.03 }}
@@ -195,22 +290,20 @@ function AppleProductCard({ product, index }) {
                 transition={{ duration: 0.2 }}
                 style={{
                     width: 'clamp(260px, 30vw, 412px)',
-                    aspectRatio: '4/5',          // ← replaces hardcoded height, reserves space before image loads
+                    aspectRatio: '4/5',
                     borderRadius: '20px',
                     overflow: 'hidden',
                     cursor: 'pointer',
                     position: 'relative',
-                    background: '#1d1d1f',        // ← visible placeholder colour while image loads
+                    background: '#1d1d1f',
                     flexShrink: 0,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                 }}
             >
-                {/* Dark gradient overlay */}
                 <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 45%, rgba(0,0,0,0.7) 100%)', pointerEvents: 'none' }} />
 
-                {/* Product image — lazy loaded, blur-up effect */}
                 <img
                     src={imageUrl}
                     alt={product.name}
@@ -360,32 +453,153 @@ function LoadMoreButton({ onClick, loading }) {
     )
 }
 
-// ─── Main Products Page ───────────────────────────────────────────────────────
-export default function Products() {
-    const [searchParams, setSearchParams] = useSearchParams()
+// ─── Hook: fetch a single category slice independently ───────────────────────
+/**
+ * Each carousel uses this hook so it:
+ *  1. Checks the cache BEFORE setting loading=true (no blank flash on hit).
+ *  2. Has its own loading state — unblocked by sibling carousels.
+ *  3. Re-fetches only when its own params change.
+ */
+function useCategoryProducts({ category, limit }) {
+    const [products, setProducts] = useState(null)   // null = not yet resolved
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        let cancelled = false
+
+        const params = { category, page_size: limit }
+
+        // ── Check cache FIRST — set data synchronously before triggering a
+        //    loading state, so there is zero blank-screen flash on a cache hit.
+        const cached = getCached(params)
+        if (cached) {
+            setProducts(cached.results ?? cached)
+            setLoading(false)
+            return
+        }
+
+        // Cache miss: show skeleton, then fetch
+        setLoading(true)
+
+        getProducts(params)
+            .then(r => {
+                if (cancelled) return
+                const data = r.data
+                const results = data.results ?? data
+                setCached(params, data)
+                setProducts(results)
+            })
+            .catch(() => {
+                if (!cancelled) setProducts([])
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false)
+            })
+
+        return () => { cancelled = true }
+    }, [category, limit])
+
+    return { products: products ?? [], loading }
+}
+
+// ─── Home Carousels (each independent) ───────────────────────────────────────
+
+function LatestCarousel({ onLinkClick }) {
+    // Fetch the most recent products across all categories
+    const { products, loading } = useCategoryProducts({ category: undefined, limit: 8 })
+
+    // Sort client-side by created_at after fetch
+    const sorted = useMemo(
+        () => [...products].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 7),
+        [products]
+    )
+
+    if (loading) {
+        return <SkeletonCarouselSection title="The latest." subtitle="Take a look at what's new!" />
+    }
+
+    return (
+        <CarouselSection
+            title="The latest."
+            subtitle="Take a look at what's new!"
+            linkLabel="View All"
+            onLinkClick={onLinkClick}
+            showViewAll={false}
+            items={sorted.map((p, i) => <AppleProductCard key={p.id} product={p} index={i} />)}
+        />
+    )
+}
+
+function AccessoriesCarousel({ onLinkClick }) {
+    const { products, loading } = useCategoryProducts({ category: 'accessories', limit: 8 })
+
+    if (loading) {
+        return <SkeletonCarouselSection title="Accessories." subtitle="Essentials that pair perfectly with your favorite devices." />
+    }
+
+    if (!products.length) return null
+
+    return (
+        <CarouselSection
+            title="Accessories."
+            subtitle="Essentials that pair perfectly with your favorite devices."
+            linkLabel="View All"
+            onLinkClick={onLinkClick}
+            items={[
+                <BannerCard key="banner-acc" title="Here and wow." subtitle={"The accessories you love.\nIn a fresh mix of colours."} imageSrc={accessoriesCardBg} />,
+                ...products.map((p, i) => <AppleProductCard key={p.id} product={p} index={i + 1} />),
+            ]}
+        />
+    )
+}
+
+function AudioCarousel({ onLinkClick }) {
+    const { products, loading } = useCategoryProducts({ category: 'audio', limit: 8 })
+
+    if (loading) {
+        return <SkeletonCarouselSection title="Loud and clear." subtitle="Unparalleled choices for rich, high-quality sound." />
+    }
+
+    if (!products.length) return null
+
+    return (
+        <CarouselSection
+            title="Loud and clear."
+            subtitle="Unparalleled choices for rich, high-quality sound."
+            linkLabel="View All"
+            onLinkClick={onLinkClick}
+            items={[
+                <BannerCard key="banner-audio" title="Silence, redefined." subtitle={"Immerse yourself in the\nmusic you love."} imageSrc={musicCardBg} />,
+                ...products.map((p, i) => <AppleProductCard key={p.id} product={p} index={i + 1} />),
+            ]}
+        />
+    )
+}
+
+// ─── Search / Category Grid (existing behavior, unchanged) ────────────────────
+
+function CategoryGrid({ category, searchQuery }) {
     const [products, setProducts] = useState([])
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
     const [page, setPage] = useState(1)
     const [hasMore, setHasMore] = useState(false)
 
-    const category = searchParams.get('category') || 'All'
-    const searchQuery = searchParams.get('search') || ''
-
-    // Reset when filters change
+    // Reset on filter change
     useEffect(() => {
         setPage(1)
         setProducts([])
         setHasMore(false)
+        setLoading(true)
     }, [category, searchQuery])
 
-    // Fetch products
     useEffect(() => {
+        let cancelled = false
+
         const params = { page_size: PAGE_SIZE, page }
         if (category !== 'All') params.category = category
         if (searchQuery) params.search = searchQuery
 
-        // Serve from cache on page 1 only
         if (page === 1) {
             const cached = getCached(params)
             if (cached) {
@@ -394,13 +608,13 @@ export default function Products() {
                 setLoading(false)
                 return
             }
-            setLoading(true)
         } else {
             setLoadingMore(true)
         }
 
         getProducts(params)
             .then(r => {
+                if (cancelled) return
                 const data = r.data
                 const results = data.results ?? data
                 if (page === 1) {
@@ -412,33 +626,95 @@ export default function Products() {
                 setHasMore(!!data.next)
             })
             .finally(() => {
-                setLoading(false)
-                setLoadingMore(false)
+                if (!cancelled) {
+                    setLoading(false)
+                    setLoadingMore(false)
+                }
             })
+
+        return () => { cancelled = true }
     }, [category, searchQuery, page])
 
-    const handleCategorySelect = (cat) => setSearchParams({ category: cat })
+    if (loading) return (
+        <div style={{ textAlign: 'center', padding: '6rem' }}>
+            <div style={{ width: '40px', height: '40px', border: '4px solid #d2d2d7', borderTop: '4px solid #0066cc', borderRadius: '50%', margin: '0 auto', animation: 'spin 1s linear infinite' }} />
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+    )
 
-    // Derived slices — computed from already-fetched products
-    const latestProducts = [...products].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 7)
-    const latestAccessories = products.filter(p => (p.category || '').toLowerCase() === 'accessories').slice(0, 8)
-    const latestAudio = products.filter(p => (p.category || '').toLowerCase() === 'audio').slice(0, 8)
+    if (products.length === 0) {
+        const isSearch = !!searchQuery
+        return (
+            <div style={{ textAlign: 'center', padding: '4rem', color: '#6e6e73' }}>
+                <p style={{ fontSize: '42px', marginBottom: '12px' }}>🔍</p>
+                <p style={{ color: '#111', fontWeight: '600', fontSize: '18px', marginBottom: '6px' }}>
+                    {isSearch ? `No results for "${searchQuery}"` : `No products in ${category}`}
+                </p>
+                <p style={{ fontSize: '14px' }}>
+                    {isSearch ? 'Try a different search term or browse by category.' : 'Check back soon!'}
+                </p>
+            </div>
+        )
+    }
 
     return (
-        <div style={{ backgroundColor: '#f5f5f7', minHeight: '100vh', paddingBottom: 'clamp(40px, 8vw, 80px)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+        <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(160px, 40vw, 220px), 1fr))', gap: 'clamp(8px, 2vw, 12px)' }}>
+                {products.map(p => (
+                    <div key={p.id} style={{ height: '280px' }}>
+                        <ProductGridCard product={p} />
+                    </div>
+                ))}
+            </div>
+            {hasMore && <LoadMoreButton onClick={() => setPage(p => p + 1)} loading={loadingMore} />}
+        </>
+    )
+}
+
+// ─── Main Products Page ───────────────────────────────────────────────────────
+export default function Products() {
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    const category = searchParams.get('category') || 'All'
+    const searchQuery = searchParams.get('search') || ''
+
+    const handleCategorySelect = useCallback(
+        (cat) => setSearchParams({ category: cat }),
+        [setSearchParams]
+    )
+
+    const isHome = category === 'All' && !searchQuery
+    const isSearch = !!searchQuery
+
+    return (
+        <div style={{
+            backgroundColor: '#f5f5f7',
+            minHeight: '100vh',
+            paddingBottom: 'clamp(40px, 8vw, 80px)',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        }}>
+            <style>{`
+                @keyframes skeletonShimmer {
+                    0%   { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                }
+                @keyframes skeletonFade {
+                    0%, 100% { opacity: 1; }
+                    50%       { opacity: 0.6; }
+                }
+                @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
+
             <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '0 clamp(1rem, 4vw, 2rem)' }}>
 
-                {/* Header */}
-                {searchQuery ? (
+                {/* ── Page Header ── */}
+                {isSearch ? (
                     <div style={{ paddingTop: 'clamp(28px, 6vw, 60px)', paddingBottom: '20px' }}>
                         <h1 style={{ fontSize: 'clamp(2rem, 7vw, 3.5rem)', fontWeight: '700', margin: '0 0 8px', color: '#111', letterSpacing: '-0.02em' }}>
                             Results for "{searchQuery}"
                         </h1>
-                        <p style={{ color: '#6e6e73', fontSize: '15px', margin: 0 }}>
-                            {products.length} product{products.length !== 1 ? 's' : ''} found
-                        </p>
                     </div>
-                ) : category === 'All' ? (
+                ) : isHome ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'clamp(28px, 6vw, 60px) 0 clamp(20px, 4vw, 40px)', flexWrap: 'wrap', gap: '16px' }}>
                         <h1 style={{ fontSize: 'clamp(2rem, 7vw, 3.5rem)', fontWeight: '700', margin: 0, color: '#111', letterSpacing: '-0.02em' }}>Store</h1>
                         <h2 style={{ fontSize: 'clamp(1rem, 3.5vw, 1.75rem)', fontWeight: '600', color: '#111', margin: 0, lineHeight: '1.2', maxWidth: '360px', letterSpacing: '-0.01em' }}>
@@ -453,93 +729,31 @@ export default function Products() {
                     </div>
                 )}
 
-                <CategoryMenuWithArrows categories={CATEGORIES} selectedCategory={category} onSelect={handleCategorySelect} />
+                <CategoryMenuWithArrows
+                    categories={CATEGORIES}
+                    selectedCategory={category}
+                    onSelect={handleCategorySelect}
+                />
 
-                {/* Full-page loading spinner — only on first page load */}
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: '6rem' }}>
-                        <div style={{ width: '40px', height: '40px', border: '4px solid #d2d2d7', borderTop: '4px solid #0066cc', borderRadius: '50%', margin: '0 auto', animation: 'spin 1s linear infinite' }} />
-                        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                {/* ── Home: three independent carousels ── */}
+                {isHome && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+                        <LatestCarousel onLinkClick={() => handleCategorySelect('All')} />
+                        <AccessoriesCarousel onLinkClick={() => handleCategorySelect('accessories')} />
+                        <AudioCarousel onLinkClick={() => handleCategorySelect('audio')} />
                     </div>
-                ) : (
-                    <>
-                        {/* ── Search results ── */}
-                        {searchQuery ? (
-                            <div style={{ marginTop: '24px' }}>
-                                {products.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '4rem', color: '#6e6e73' }}>
-                                        <p style={{ fontSize: '42px', marginBottom: '12px' }}>🔍</p>
-                                        <p style={{ color: '#111', fontWeight: '600', fontSize: '18px', marginBottom: '6px' }}>No results for "{searchQuery}"</p>
-                                        <p style={{ fontSize: '14px' }}>Try a different search term or browse by category.</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(160px, 40vw, 220px), 1fr))', gap: 'clamp(8px, 2vw, 12px)' }}>
-                                            {products.map(p => (
-                                                <div key={p.id} style={{ height: '280px' }}>
-                                                    <ProductGridCard product={p} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {hasMore && <LoadMoreButton onClick={() => setPage(p => p + 1)} loading={loadingMore} />}
-                                    </>
-                                )}
-                            </div>
+                )}
 
-                            /* ── Home / "All" carousels ── */
-                        ) : category === 'All' ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
-                                <CarouselSection
-                                    title="The latest."
-                                    subtitle="Take a look at what's new!"
-                                    linkLabel="View All"
-                                    onLinkClick={() => handleCategorySelect('All')}
-                                    showViewAll={false}
-                                    items={latestProducts.map((p, i) => <AppleProductCard key={p.id} product={p} index={i} />)}
-                                />
-
-                                {latestAccessories.length > 0 && (
-                                    <CarouselSection
-                                        title="Accessories."
-                                        subtitle="Essentials that pair perfectly with your favorite devices."
-                                        linkLabel="View All"
-                                        onLinkClick={() => handleCategorySelect('accessories')}
-                                        items={[
-                                            <BannerCard key="banner-acc" title="Here and wow." subtitle={"The accessories you love.\nIn a fresh mix of colours."} imageSrc={accessoriesCardBg} />,
-                                            ...latestAccessories.map((p, i) => <AppleProductCard key={p.id} product={p} index={i + 1} />)
-                                        ]}
-                                    />
-                                )}
-
-                                {latestAudio.length > 0 && (
-                                    <CarouselSection
-                                        title="Loud and clear."
-                                        subtitle="Unparalleled choices for rich, high-quality sound."
-                                        linkLabel="View All"
-                                        onLinkClick={() => handleCategorySelect('audio')}
-                                        items={[
-                                            <BannerCard key="banner-audio" title="Silence, redefined." subtitle={"Immerse yourself in the\nmusic you love."} imageSrc={musicCardBg} />,
-                                            ...latestAudio.map((p, i) => <AppleProductCard key={p.id} product={p} index={i + 1} />)
-                                        ]}
-                                    />
-                                )}
-                            </div>
-
-                            /* ── Category grid ── */
-                        ) : (
-                            <div style={{ marginTop: '40px' }}>
-                                <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 2rem)', fontWeight: '700', marginBottom: 'clamp(1rem, 3vw, 2rem)', color: '#111' }}>Explore the lineup.</h2>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(160px, 40vw, 220px), 1fr))', gap: 'clamp(8px, 2vw, 12px)' }}>
-                                    {products.map(p => (
-                                        <div key={p.id} style={{ height: '280px' }}>
-                                            <ProductGridCard product={p} />
-                                        </div>
-                                    ))}
-                                </div>
-                                {hasMore && <LoadMoreButton onClick={() => setPage(p => p + 1)} loading={loadingMore} />}
-                            </div>
+                {/* ── Category grid or search results ── */}
+                {!isHome && (
+                    <div style={{ marginTop: isSearch ? '24px' : '40px' }}>
+                        {!isSearch && (
+                            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 2rem)', fontWeight: '700', marginBottom: 'clamp(1rem, 3vw, 2rem)', color: '#111' }}>
+                                Explore the lineup.
+                            </h2>
                         )}
-                    </>
+                        <CategoryGrid category={category} searchQuery={searchQuery} />
+                    </div>
                 )}
             </div>
         </div>
