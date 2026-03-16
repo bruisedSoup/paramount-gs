@@ -210,7 +210,7 @@ export default function Navbar() {
             <nav style={nav}>
                 <div style={containerStyle}>
                     <Link to="/" style={{ display: 'flex', alignItems: 'center' }} onClick={() => setMenuOpen(false)}>
-                        <img src="/paramount-gs.png" alt="Paramount Gadgets" style={{ height: '24px' }} />
+                        <img src="/unbox-lab_logo.png" alt="Unbox Lab" style={{ height: '24px' }} />
                     </Link>
 
                     {!searchOpen && (
