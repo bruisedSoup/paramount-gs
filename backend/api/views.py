@@ -16,7 +16,6 @@ from .serializers import (
 import cloudinary
 import cloudinary.uploader
 from decouple import config
-from django.core.paginator import Paginator
 
 cloudinary.config(
     cloud_name=config('CLOUDINARY_CLOUD_NAME', default=''),
@@ -26,11 +25,6 @@ cloudinary.config(
 
 
 def _mutable_data(request_data):
-    """
-    Safely convert a Django QueryDict (multipart/form-data) or plain dict
-    into a regular mutable dict so that spreading with ** works correctly
-    and single-value fields aren't wrapped in lists.
-    """
     if hasattr(request_data, 'dict'):
         return request_data.dict()
     return dict(request_data)
@@ -42,7 +36,6 @@ class IsAdminUser(permissions.BasePermission):
 
 
 # ── TEMPORARY: One-time admin setup ──────────────────────
-# DELETE this class AND its url entry in urls.py after you create your admin!
 class SetupAdminView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -193,12 +186,51 @@ class ProductListView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
-        qs       = Product.objects.all()
+        qs = Product.objects.all()
+
         category = request.query_params.get('category')
         search   = request.query_params.get('search')
-        if category: qs = qs.filter(category=category)
-        if search:   qs = qs.filter(name__icontains=search)
-        return Response([serialize_product(p) for p in qs])
+        if category:
+            qs = qs.filter(category=category)
+        if search:
+            qs = qs.filter(name__icontains=search)
+
+        # ── Pagination ────────────────────────────────────────
+        # page_size defaults to 20; page defaults to 1.
+        # Callers that want ALL products (e.g. admin list) can pass
+        # page_size=0 or a very large value.
+        try:
+            page_size = int(request.query_params.get('page_size', 20))
+        except (ValueError, TypeError):
+            page_size = 20
+
+        # page_size=0 means "no limit" — used by admin panels
+        if page_size <= 0:
+            return Response({
+                'results': [serialize_product(p) for p in qs],
+                'count':   qs.count(),
+                'next':    None,
+                'previous': None,
+            })
+
+        try:
+            page = max(1, int(request.query_params.get('page', 1)))
+        except (ValueError, TypeError):
+            page = 1
+
+        total   = qs.count()
+        offset  = (page - 1) * page_size
+        items   = list(qs.skip(offset).limit(page_size))
+
+        has_next     = (offset + page_size) < total
+        has_previous = page > 1
+
+        return Response({
+            'results':  [serialize_product(p) for p in items],
+            'count':    total,
+            'next':     page + 1 if has_next     else None,
+            'previous': page - 1 if has_previous else None,
+        })
 
     def post(self, request):
         data      = request.data
@@ -384,7 +416,6 @@ class ProductReviewsView(APIView):
         return Response({'reviews': data, 'total': total, 'average': avg, 'distribution': dist})
 
     def post(self, request, product_id):
-        # ── FIX: QueryDict spreads values as lists; .dict() unwraps them ──
         data = _mutable_data(request.data)
         data['product_id'] = product_id
 
@@ -449,7 +480,6 @@ class ReviewDetailView(APIView):
         if review.edit_count >= 1:
             return Response({'detail': 'Reviews can only be edited once.'}, status=400)
 
-        # ── FIX: same QueryDict unwrap needed for multipart edit submissions ──
         s = EditReviewSerializer(data=_mutable_data(request.data))
         if not s.is_valid():
             return Response(s.errors, status=400)
