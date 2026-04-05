@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.http import HttpResponse
 from datetime import datetime
 from .models import User
 from .mongo_models import Product, Order, OrderItem, Review, ReviewReply, ProductUpdate, UpdateComment
@@ -16,6 +17,8 @@ from .serializers import (
 import cloudinary
 import cloudinary.uploader
 from decouple import config
+import csv
+import io
 
 cloudinary.config(
     cloud_name=config('CLOUDINARY_CLOUD_NAME', default=''),
@@ -618,3 +621,226 @@ class DashboardView(APIView):
             'orders_by_product_category': orders_by_product_category,
             'sales_by_category':          {k: float(v) for k, v in sales_by_category.items()},
         })
+
+
+# ── Report Download ───────────────────────────────────────
+
+class ReportDownloadView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        report_type = request.query_params.get('type', 'products')  # 'products' | 'orders'
+        file_format = request.query_params.get('format', 'csv')     # 'csv' | 'pdf'
+
+        if report_type == 'products':
+            return self._products_report(file_format)
+        elif report_type == 'orders':
+            return self._orders_report(file_format)
+        else:
+            return Response({'detail': 'Invalid report type. Use products or orders.'}, status=400)
+
+    # ── Products ───────────────────────────────────────────
+    def _products_report(self, file_format):
+        products = list(Product.objects.all())
+        now = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+        category_map = {}
+        for p in products:
+            cat = (p.category or 'other').capitalize()
+            if cat not in category_map:
+                category_map[cat] = {'count': 0, 'total_stock': 0, 'total_value': 0.0}
+            category_map[cat]['count'] += 1
+            category_map[cat]['total_stock'] += int(p.stock or 0)
+            category_map[cat]['total_value'] += float(p.price or 0) * int(p.stock or 0)
+        if file_format == 'csv':
+            return self._products_csv(products, category_map, now)
+        return self._products_pdf(products, category_map, now)
+
+    def _products_csv(self, products, category_map, now):
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(['PARAMOUNT GS - PRODUCTS SUMMARY REPORT'])
+        w.writerow(['Generated:', now])
+        w.writerow(['Total Products:', len(products)])
+        w.writerow([])
+        w.writerow(['CATEGORY SUMMARY'])
+        w.writerow(['Category', 'Product Count', 'Total Stock', 'Inventory Value (PHP)'])
+        for cat, s in sorted(category_map.items()):
+            w.writerow([cat, s['count'], s['total_stock'], f"{s['total_value']:,.2f}"])
+        w.writerow([])
+        w.writerow(['PRODUCT LIST'])
+        w.writerow(['Name', 'Category', 'Price (PHP)', 'Stock', 'Status'])
+        for p in sorted(products, key=lambda x: (x.category or '')):
+            stock = int(p.stock or 0)
+            status = 'In Stock' if stock > 5 else ('Low Stock' if stock > 0 else 'Out of Stock')
+            w.writerow([p.name, (p.category or 'other').capitalize(), f"{float(p.price or 0):,.2f}", stock, status])
+        resp = HttpResponse(buf.getvalue(), content_type='text/csv')
+        resp['Content-Disposition'] = 'attachment; filename="paramount_products_report.csv"'
+        return resp
+
+    def _products_pdf(self, products, category_map, now):
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.enums import TA_LEFT
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        BLUE = colors.HexColor('#0066cc')
+        GREY = colors.HexColor('#f5f5f7')
+        DARK = colors.HexColor('#111111')
+        title_s   = ParagraphStyle('t', parent=styles['Title'],   textColor=BLUE, fontSize=22, spaceAfter=4, alignment=TA_LEFT)
+        sub_s     = ParagraphStyle('s', parent=styles['Normal'],  textColor=colors.HexColor('#6e6e73'), fontSize=10, spaceAfter=2)
+        section_s = ParagraphStyle('h', parent=styles['Heading2'],textColor=DARK, fontSize=13, spaceBefore=14, spaceAfter=6)
+        story = []
+        story.append(Paragraph('Paramount GS', title_s))
+        story.append(Paragraph('Products Summary Report', section_s))
+        story.append(Paragraph(f'Generated: {now}  |  Total Products: {len(products)}', sub_s))
+        story.append(Spacer(1, 0.4*cm))
+        story.append(Paragraph('Category Breakdown', section_s))
+        cat_data = [['Category', 'Products', 'Total Stock', 'Inventory Value (PHP)']]
+        for cat, s in sorted(category_map.items()):
+            cat_data.append([cat, str(s['count']), str(s['total_stock']), f"{s['total_value']:,.2f}"])
+        ct = Table(cat_data, colWidths=[4.5*cm, 3*cm, 3.5*cm, 5.5*cm])
+        ct.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), BLUE), ('TEXTCOLOR', (0,0),(-1,0), colors.white),
+            ('FONTNAME', (0,0),(-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0),(-1,-1), 9),
+            ('ROWBACKGROUNDS', (0,1),(-1,-1), [colors.white, GREY]),
+            ('GRID', (0,0),(-1,-1), 0.4, colors.HexColor('#d2d2d7')),
+            ('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8),
+            ('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6),
+            ('ALIGN',(1,0),(-1,-1),'CENTER'),
+        ]))
+        story.append(ct)
+        story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph('Product List', section_s))
+        prod_data = [['Product Name', 'Category', 'Price (PHP)', 'Stock', 'Status']]
+        for p in sorted(products, key=lambda x: (x.category or '')):
+            stock = int(p.stock or 0)
+            st = 'In Stock' if stock > 5 else ('Low Stock' if stock > 0 else 'Out of Stock')
+            prod_data.append([p.name, (p.category or 'other').capitalize(), f"{float(p.price or 0):,.2f}", str(stock), st])
+        pt = Table(prod_data, colWidths=[5.5*cm, 3.2*cm, 3.2*cm, 2*cm, 2.6*cm])
+        pt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), BLUE), ('TEXTCOLOR', (0,0),(-1,0), colors.white),
+            ('FONTNAME', (0,0),(-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0),(-1,-1), 8),
+            ('ROWBACKGROUNDS', (0,1),(-1,-1), [colors.white, GREY]),
+            ('GRID', (0,0),(-1,-1), 0.4, colors.HexColor('#d2d2d7')),
+            ('LEFTPADDING',(0,0),(-1,-1),6),('RIGHTPADDING',(0,0),(-1,-1),6),
+            ('TOPPADDING',(0,0),(-1,-1),5),('BOTTOMPADDING',(0,0),(-1,-1),5),
+        ]))
+        story.append(pt)
+        doc.build(story)
+        buf.seek(0)
+        resp = HttpResponse(buf.read(), content_type='application/pdf')
+        resp['Content-Disposition'] = 'attachment; filename="paramount_products_report.pdf"'
+        return resp
+
+    # ── Orders ────────────────────────────────────────────
+    def _orders_report(self, file_format):
+        orders = list(Order.objects.all())
+        now = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+        total_revenue     = sum(float(o.total_price) for o in orders)
+        delivered_revenue = sum(float(o.total_price) for o in orders if o.status == 'delivered')
+        status_map = {}
+        for o in orders:
+            s = o.status or 'pending'
+            status_map[s] = status_map.get(s, 0) + 1
+        if file_format == 'csv':
+            return self._orders_csv(orders, status_map, total_revenue, delivered_revenue, now)
+        return self._orders_pdf(orders, status_map, total_revenue, delivered_revenue, now)
+
+    def _orders_csv(self, orders, status_map, total_revenue, delivered_revenue, now):
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(['PARAMOUNT GS - ORDERS SUMMARY REPORT'])
+        w.writerow(['Generated:', now])
+        w.writerow(['Total Orders:', len(orders)])
+        w.writerow(['Total Revenue (PHP):', f'{total_revenue:,.2f}'])
+        w.writerow(['Delivered Revenue (PHP):', f'{delivered_revenue:,.2f}'])
+        w.writerow([])
+        w.writerow(['STATUS BREAKDOWN'])
+        w.writerow(['Status', 'Count'])
+        for s, c in sorted(status_map.items()):
+            w.writerow([s.capitalize(), c])
+        w.writerow([])
+        w.writerow(['ORDER LIST'])
+        w.writerow(['Order ID', 'Customer', 'Email', 'Items', 'Total (PHP)', 'Status', 'Date'])
+        for o in sorted(orders, key=lambda x: str(x.created_at or ''), reverse=True):
+            w.writerow([
+                str(o.id)[-8:].upper(), o.user_name, o.user_email,
+                sum(item.quantity for item in o.items),
+                f'{float(o.total_price):,.2f}',
+                (o.status or 'pending').capitalize(),
+                str(o.created_at)[:10] if o.created_at else '',
+            ])
+        resp = HttpResponse(buf.getvalue(), content_type='text/csv')
+        resp['Content-Disposition'] = 'attachment; filename="paramount_orders_report.csv"'
+        return resp
+
+    def _orders_pdf(self, orders, status_map, total_revenue, delivered_revenue, now):
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.enums import TA_LEFT
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        BLUE = colors.HexColor('#0066cc')
+        GREY = colors.HexColor('#f5f5f7')
+        DARK = colors.HexColor('#111111')
+        title_s   = ParagraphStyle('t', parent=styles['Title'],   textColor=BLUE, fontSize=22, spaceAfter=4, alignment=TA_LEFT)
+        sub_s     = ParagraphStyle('s', parent=styles['Normal'],  textColor=colors.HexColor('#6e6e73'), fontSize=10, spaceAfter=2)
+        section_s = ParagraphStyle('h', parent=styles['Heading2'],textColor=DARK, fontSize=13, spaceBefore=14, spaceAfter=6)
+        story = []
+        story.append(Paragraph('Paramount GS', title_s))
+        story.append(Paragraph('Orders Summary Report', section_s))
+        story.append(Paragraph(
+            f'Generated: {now}  |  Total Orders: {len(orders)}  |  '
+            f'Total Revenue: PHP {total_revenue:,.2f}  |  Delivered: PHP {delivered_revenue:,.2f}', sub_s))
+        story.append(Spacer(1, 0.4*cm))
+        story.append(Paragraph('Order Status Breakdown', section_s))
+        status_data = [['Status', 'Count']]
+        for s, c in sorted(status_map.items()):
+            status_data.append([s.capitalize(), str(c)])
+        stt = Table(status_data, colWidths=[5*cm, 3*cm])
+        stt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), BLUE), ('TEXTCOLOR', (0,0),(-1,0), colors.white),
+            ('FONTNAME', (0,0),(-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0),(-1,-1), 9),
+            ('ROWBACKGROUNDS', (0,1),(-1,-1), [colors.white, GREY]),
+            ('GRID', (0,0),(-1,-1), 0.4, colors.HexColor('#d2d2d7')),
+            ('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8),
+            ('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6),
+            ('ALIGN',(1,0),(-1,-1),'CENTER'),
+        ]))
+        story.append(stt)
+        story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph('Order List', section_s))
+        order_data = [['Order ID', 'Customer', 'Items', 'Total (PHP)', 'Status', 'Date']]
+        for o in sorted(orders, key=lambda x: str(x.created_at or ''), reverse=True):
+            order_data.append([
+                str(o.id)[-8:].upper(),
+                f'{o.user_name} / {o.user_email}',
+                str(sum(item.quantity for item in o.items)),
+                f'{float(o.total_price):,.2f}',
+                (o.status or 'pending').capitalize(),
+                str(o.created_at)[:10] if o.created_at else '',
+            ])
+        ot = Table(order_data, colWidths=[2.2*cm, 5*cm, 1.5*cm, 3*cm, 2.5*cm, 2.3*cm])
+        ot.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), BLUE), ('TEXTCOLOR', (0,0),(-1,0), colors.white),
+            ('FONTNAME', (0,0),(-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0),(-1,-1), 7.5),
+            ('ROWBACKGROUNDS', (0,1),(-1,-1), [colors.white, GREY]),
+            ('GRID', (0,0),(-1,-1), 0.4, colors.HexColor('#d2d2d7')),
+            ('LEFTPADDING',(0,0),(-1,-1),5),('RIGHTPADDING',(0,0),(-1,-1),5),
+            ('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),
+            ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+        ]))
+        story.append(ot)
+        doc.build(story)
+        buf.seek(0)
+        resp = HttpResponse(buf.read(), content_type='application/pdf')
+        resp['Content-Disposition'] = 'attachment; filename="paramount_orders_report.pdf"'
+        return resp
