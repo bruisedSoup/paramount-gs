@@ -80,6 +80,14 @@ const fmtMoney = (value) => Number(value || 0).toLocaleString(undefined, {
     maximumFractionDigits: 2,
 })
 
+const formatReportDate = (value = new Date()) => new Date(value).toLocaleString('en-PH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+})
+
 const csvCell = (value) => {
     const text = String(value ?? '')
     return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
@@ -98,38 +106,195 @@ const escapePdfText = (text) => String(text)
     .replace(/\(/g, '\\(')
     .replace(/\)/g, '\\)')
 
-const makeSimplePdfBlob = (lines) => {
-    const pageHeight = 792
-    const top = 760
-    const left = 40
-    const lineHeight = 14
-    const linesPerPage = 48
-    const pages = []
+const wrapPdfText = (text, maxChars = 92) => {
+    const source = String(text ?? '')
+    if (!source) return ['']
+    const words = source.split(/\s+/)
+    const lines = []
+    let current = ''
 
-    for (let i = 0; i < lines.length; i += linesPerPage) {
-        const chunk = lines.slice(i, i + linesPerPage)
-        let stream = 'BT\n/F1 10 Tf\n'
-        chunk.forEach((line, index) => {
-            const y = top - (index * lineHeight)
-            stream += `1 0 0 1 ${left} ${y} Tm (${escapePdfText(line)}) Tj\n`
+    words.forEach((word) => {
+        const candidate = current ? `${current} ${word}` : word
+        if (candidate.length <= maxChars) {
+            current = candidate
+            return
+        }
+        if (current) lines.push(current)
+        if (word.length <= maxChars) {
+            current = word
+            return
+        }
+        for (let i = 0; i < word.length; i += maxChars) {
+            const chunk = word.slice(i, i + maxChars)
+            if (chunk.length === maxChars) lines.push(chunk)
+            else current = chunk
+        }
+    })
+
+    if (current) lines.push(current)
+    return lines.length ? lines : ['']
+}
+
+const pushWrappedText = (target, text, options = {}) => {
+    const maxChars = options.maxChars ?? 92
+    const wrapped = wrapPdfText(text, maxChars)
+    wrapped.forEach((line, index) => {
+        target.push({
+            ...options,
+            text: line,
+            marginTop: index === 0 ? (options.marginTop ?? 0) : 0,
         })
-        stream += 'ET'
-        pages.push(stream)
+    })
+}
+
+const makeStyledPdfBlob = (elements) => {
+    const pageWidth = 612
+    const pageHeight = 792
+    const marginX = 42
+    const topMargin = 48
+    const bottomMargin = 42
+    const pages = []
+    let current = []
+    let y = pageHeight - topMargin
+
+    const ensureSpace = (needed = 16) => {
+        if (y - needed < bottomMargin) {
+            pages.push(current)
+            current = []
+            y = pageHeight - topMargin
+        }
     }
+
+    elements.forEach((element) => {
+        if (element.type === 'spacer') {
+            ensureSpace(element.height ?? 12)
+            y -= element.height ?? 12
+            return
+        }
+
+        if (element.type === 'divider') {
+            ensureSpace((element.marginTop ?? 6) + 8)
+            y -= element.marginTop ?? 6
+            current.push({
+                type: 'line',
+                x1: marginX,
+                x2: pageWidth - marginX,
+                y,
+                color: element.color || 'D2D2D7',
+                width: element.width ?? 1,
+            })
+            y -= 8
+            return
+        }
+
+        if (element.type === 'box') {
+            const labelLines = element.label ? wrapPdfText(element.label, element.labelMaxChars ?? 72) : []
+            const valueLines = element.value ? wrapPdfText(element.value, element.valueMaxChars ?? 76) : []
+            const contentLines = labelLines.length + valueLines.length
+            const boxHeight = element.height ?? Math.max(54, 20 + (contentLines * 14))
+            ensureSpace((element.marginTop ?? 0) + boxHeight + 8)
+            y -= element.marginTop ?? 0
+            current.push({
+                type: 'rect',
+                x: marginX,
+                y: y - boxHeight,
+                width: pageWidth - (marginX * 2),
+                height: boxHeight,
+                fill: element.fill || 'F5F5F7',
+            })
+            labelLines.forEach((line, index) => {
+                current.push({
+                    type: 'text',
+                    x: marginX + 14,
+                    y: y - 18 - (index * 12),
+                    text: line,
+                    size: 9,
+                    color: element.labelColor || '6E6E73',
+                })
+            })
+            valueLines.forEach((line, index) => {
+                current.push({
+                    type: 'text',
+                    x: marginX + 14,
+                    y: y - 18 - (labelLines.length * 12) - 6 - (index * 14),
+                    text: line,
+                    size: element.valueSize ?? 12,
+                    color: element.valueColor || '111111',
+                })
+            })
+            y -= boxHeight + 10
+            return
+        }
+
+        if (element.type === 'text') {
+            const size = element.size ?? 10
+            const lineHeight = element.lineHeight ?? (size + 4)
+            ensureSpace((element.marginTop ?? 0) + lineHeight)
+            y -= element.marginTop ?? 0
+            current.push({
+                type: 'text',
+                x: element.x ?? marginX,
+                y,
+                text: element.text,
+                size,
+                color: element.color || '111111',
+            })
+            y -= lineHeight
+        }
+    })
+
+    if (current.length || !pages.length) pages.push(current)
+
+    const pageStreams = pages.map((items, pageIndex) => {
+        let stream = ''
+
+        // Header accent bar
+        stream += '0.49 0.23 0.92 rg\n'
+        stream += `${marginX} ${pageHeight - 28} ${pageWidth - (marginX * 2)} 4 re f\n`
+
+        // Footer page number
+        stream += 'BT\n/F1 9 Tf\n0.56 0.56 0.58 rg\n'
+        stream += `1 0 0 1 ${pageWidth - 90} 20 Tm (Page ${pageIndex + 1}) Tj\nET\n`
+
+        items.forEach((item) => {
+            if (item.type === 'rect') {
+                const rgb = item.fill.match(/.{1,2}/g).map((part) => Number.parseInt(part, 16) / 255)
+                stream += `${rgb[0].toFixed(3)} ${rgb[1].toFixed(3)} ${rgb[2].toFixed(3)} rg\n`
+                stream += `${item.x} ${item.y} ${item.width} ${item.height} re f\n`
+                return
+            }
+            if (item.type === 'line') {
+                const rgb = item.color.match(/.{1,2}/g).map((part) => Number.parseInt(part, 16) / 255)
+                stream += `${rgb[0].toFixed(3)} ${rgb[1].toFixed(3)} ${rgb[2].toFixed(3)} RG\n`
+                stream += `${item.width} w\n${item.x1} ${item.y} m ${item.x2} ${item.y} l S\n`
+                return
+            }
+            if (item.type === 'text') {
+                const rgb = item.color.match(/.{1,2}/g).map((part) => Number.parseInt(part, 16) / 255)
+                stream += 'BT\n'
+                stream += `/F1 ${item.size} Tf\n`
+                stream += `${rgb[0].toFixed(3)} ${rgb[1].toFixed(3)} ${rgb[2].toFixed(3)} rg\n`
+                stream += `1 0 0 1 ${item.x} ${item.y} Tm (${escapePdfText(item.text)}) Tj\n`
+                stream += 'ET\n'
+            }
+        })
+
+        return stream
+    })
 
     const objects = []
     objects.push('1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj')
-    const kids = pages.map((_, i) => `${3 + i * 2} 0 R`).join(' ')
-    objects.push(`2 0 obj << /Type /Pages /Kids [${kids}] /Count ${pages.length} >> endobj`)
+    const kids = pageStreams.map((_, i) => `${3 + i * 2} 0 R`).join(' ')
+    objects.push(`2 0 obj << /Type /Pages /Kids [${kids}] /Count ${pageStreams.length} >> endobj`)
 
-    pages.forEach((stream, i) => {
+    pageStreams.forEach((stream, i) => {
         const pageObjNum = 3 + i * 2
         const contentObjNum = pageObjNum + 1
-        objects.push(`${pageObjNum} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 ${pageHeight}] /Resources << /Font << /F1 ${3 + pages.length * 2} 0 R >> >> /Contents ${contentObjNum} 0 R >> endobj`)
+        objects.push(`${pageObjNum} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 ${pageHeight}] /Resources << /Font << /F1 ${3 + pageStreams.length * 2} 0 R >> >> /Contents ${contentObjNum} 0 R >> endobj`)
         objects.push(`${contentObjNum} 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`)
     })
 
-    const fontObjNum = 3 + pages.length * 2
+    const fontObjNum = 3 + pageStreams.length * 2
     objects.push(`${fontObjNum} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj`)
 
     let pdf = '%PDF-1.4\n'
@@ -149,7 +314,7 @@ const makeSimplePdfBlob = (lines) => {
 }
 
 const buildProductsCsv = (products) => {
-    const generatedAt = new Date().toISOString()
+    const generatedAt = formatReportDate()
     const categoryMap = {}
     products.forEach((p) => {
         const cat = p.category || 'other'
@@ -186,7 +351,7 @@ const buildProductsCsv = (products) => {
 }
 
 const buildOrdersCsv = (orders) => {
-    const generatedAt = new Date().toISOString()
+    const generatedAt = formatReportDate()
     const statusMap = {}
     let totalRevenue = 0
     let deliveredRevenue = 0
@@ -231,47 +396,65 @@ const buildOrdersCsv = (orders) => {
     return rows.map((row) => row.map(csvCell).join(',')).join('\n')
 }
 
-const buildProductsPdfLines = (products) => {
-    const generatedAt = new Date().toISOString()
+const buildProductsPdfElements = (products) => {
+    const generatedAt = formatReportDate()
     const categoryMap = {}
+    let totalInventoryValue = 0
     products.forEach((p) => {
         const cat = p.category || 'other'
         if (!categoryMap[cat]) categoryMap[cat] = { count: 0, totalStock: 0, totalValue: 0 }
         categoryMap[cat].count += 1
         categoryMap[cat].totalStock += Number(p.stock || 0)
         categoryMap[cat].totalValue += Number(p.price || 0) * Number(p.stock || 0)
+        totalInventoryValue += Number(p.price || 0) * Number(p.stock || 0)
     })
 
-    const lines = [
-        'PARAMOUNT GS',
-        'Products Summary Report',
-        `Generated: ${generatedAt}`,
-        `Total Products: ${products.length}`,
-        '',
-        'CATEGORY SUMMARY',
+    const elements = [
+        { type: 'text', text: 'PARAMOUNT GS', size: 22, color: '111111' },
+        { type: 'text', text: 'Products Summary Report', size: 14, color: '7C3AED', marginTop: 2 },
+        { type: 'text', text: `Generated ${generatedAt}`, size: 9, color: '6E6E73', marginTop: 4 },
+        { type: 'spacer', height: 8 },
+        { type: 'box', label: 'Total Products', value: String(products.length), fill: 'EEF4FF' },
+        { type: 'box', label: 'Inventory Value', value: `PHP ${fmtMoney(totalInventoryValue)}`, fill: 'F5EDFF' },
+        { type: 'text', text: 'Category Summary', size: 13, color: '111111', marginTop: 4 },
+        { type: 'divider', marginTop: 4, color: 'D9D9E3' },
     ]
 
     Object.entries(categoryMap)
         .sort(([a], [b]) => a.localeCompare(b))
         .forEach(([cat, s]) => {
-            lines.push(`${cat.toUpperCase()} | Products: ${s.count} | Stock: ${s.totalStock} | Inventory Value: PHP ${fmtMoney(s.totalValue)}`)
+            pushWrappedText(
+                elements,
+                `${cat.charAt(0).toUpperCase() + cat.slice(1)}: ${s.count} product(s), ${s.totalStock} total stock, inventory value PHP ${fmtMoney(s.totalValue)}`,
+                { type: 'text', size: 10, color: '333333', marginTop: 2, maxChars: 86 }
+            )
         })
 
-    lines.push('', 'PRODUCT LIST')
+    elements.push({ type: 'spacer', height: 8 })
+    elements.push({ type: 'text', text: 'Product List', size: 13, color: '111111' })
+    elements.push({ type: 'divider', marginTop: 4, color: 'D9D9E3' })
+
     products
         .slice()
         .sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name))
         .forEach((p) => {
             const stock = Number(p.stock || 0)
             const status = stock > 5 ? 'In Stock' : (stock > 0 ? 'Low Stock' : 'Out of Stock')
-            lines.push(`${p.name} | ${(p.category || 'other').toUpperCase()} | PHP ${fmtMoney(p.price)} | Stock: ${stock} | ${status}`)
+            elements.push({
+                type: 'box',
+                label: p.name,
+                value: `${(p.category || 'other').toUpperCase()} | PHP ${fmtMoney(p.price)} | Stock ${stock} | ${status}`,
+                fill: 'FAFAFC',
+                marginTop: 2,
+                valueSize: 10,
+            })
         })
 
-    return lines
+    return elements
 }
 
-const buildOrdersPdfLines = (orders) => {
-    const generatedAt = new Date().toISOString()
+const buildOrdersPdfElements = (orders) => {
+    const generatedAt = formatReportDate()
     const statusMap = {}
     let totalRevenue = 0
     let deliveredRevenue = 0
@@ -284,34 +467,49 @@ const buildOrdersPdfLines = (orders) => {
         if (status === 'delivered') deliveredRevenue += total
     })
 
-    const lines = [
-        'PARAMOUNT GS',
-        'Orders Summary Report',
-        `Generated: ${generatedAt}`,
-        `Total Orders: ${orders.length}`,
-        `Total Revenue: PHP ${fmtMoney(totalRevenue)}`,
-        `Delivered Revenue: PHP ${fmtMoney(deliveredRevenue)}`,
-        '',
-        'STATUS BREAKDOWN',
+    const elements = [
+        { type: 'text', text: 'PARAMOUNT GS', size: 22, color: '111111' },
+        { type: 'text', text: 'Orders Summary Report', size: 14, color: '7C3AED', marginTop: 2 },
+        { type: 'text', text: `Generated ${generatedAt}`, size: 9, color: '6E6E73', marginTop: 4 },
+        { type: 'spacer', height: 8 },
+        { type: 'box', label: 'Total Orders', value: String(orders.length), fill: 'EEF9F0' },
+        { type: 'box', label: 'Total Revenue', value: `PHP ${fmtMoney(totalRevenue)}`, fill: 'FFF7E8' },
+        { type: 'box', label: 'Delivered Revenue', value: `PHP ${fmtMoney(deliveredRevenue)}`, fill: 'EEF4FF' },
+        { type: 'text', text: 'Status Breakdown', size: 13, color: '111111', marginTop: 4 },
+        { type: 'divider', marginTop: 4, color: 'D9D9E3' },
     ]
 
     Object.entries(statusMap)
         .sort(([a], [b]) => a.localeCompare(b))
         .forEach(([status, count]) => {
-            lines.push(`${status.toUpperCase()} | Count: ${count}`)
+            pushWrappedText(
+                elements,
+                `${status.charAt(0).toUpperCase() + status.slice(1)}: ${count} order(s)`,
+                { type: 'text', size: 10, color: '333333', marginTop: 2, maxChars: 86 }
+            )
         })
 
-    lines.push('', 'ORDER LIST')
+    elements.push({ type: 'spacer', height: 8 })
+    elements.push({ type: 'text', text: 'Order List', size: 13, color: '111111' })
+    elements.push({ type: 'divider', marginTop: 4, color: 'D9D9E3' })
+
     orders
         .slice()
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
         .forEach((o) => {
             const itemCount = (o.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)
             const date = o.created_at ? String(o.created_at).slice(0, 10) : ''
-            lines.push(`${String(o.id).slice(-8).toUpperCase()} | ${o.user_name || ''} | ${o.user_email || ''} | Items: ${itemCount} | PHP ${fmtMoney(o.total_price)} | ${(o.status || 'pending').toUpperCase()} | ${date}`)
+            elements.push({
+                type: 'box',
+                label: `Order ${String(o.id).slice(-8).toUpperCase()} • ${o.user_name || 'Customer'}`,
+                value: `${o.user_email || ''} | ${itemCount} item(s) | PHP ${fmtMoney(o.total_price)} | ${(o.status || 'pending').toUpperCase()} | ${date}`,
+                fill: 'FAFAFC',
+                marginTop: 2,
+                valueSize: 10,
+            })
         })
 
-    return lines
+    return elements
 }
 
 export const downloadReport = async (type, format) => {
@@ -322,7 +520,7 @@ export const downloadReport = async (type, format) => {
             downloadBlob(new Blob([buildProductsCsv(products)], { type: 'text/csv;charset=utf-8' }), 'paramount_products_report.csv')
             return
         }
-        downloadBlob(makeSimplePdfBlob(buildProductsPdfLines(products)), 'paramount_products_report.pdf')
+        downloadBlob(makeStyledPdfBlob(buildProductsPdfElements(products)), 'paramount_products_report.pdf')
         return
     }
 
@@ -333,7 +531,7 @@ export const downloadReport = async (type, format) => {
             downloadBlob(new Blob([buildOrdersCsv(orders)], { type: 'text/csv;charset=utf-8' }), 'paramount_orders_report.csv')
             return
         }
-        downloadBlob(makeSimplePdfBlob(buildOrdersPdfLines(orders)), 'paramount_orders_report.pdf')
+        downloadBlob(makeStyledPdfBlob(buildOrdersPdfElements(orders)), 'paramount_orders_report.pdf')
         return
     }
 
