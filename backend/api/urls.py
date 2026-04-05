@@ -34,4 +34,5 @@ urlpatterns = [
     # Admin dashboard
     path('admin/dashboard/', views.DashboardView.as_view()),
     path('admin/report/',    views.ReportDownloadView.as_view()),
+    path('reports/download/', views.ReportDownloadView.as_view()),
 ]
