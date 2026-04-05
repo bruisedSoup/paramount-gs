@@ -76,9 +76,13 @@ export const commentOnUpdate = (updateId, body) => api.post(`/product-updates/${
 export const getDashboard = () => api.get('/admin/dashboard/')
 export const downloadReport = async (type, format) => {
     const token = localStorage.getItem('access_token')
-    const url = `${API_URL}/admin/report/?type=${type}&format=${format}`
+    // Use a dedicated reports path to avoid any ambiguity with admin-prefixed routes in production.
+    const url = `${API_URL}/reports/download/?type=${type}&format=${format}`
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    if (!res.ok) throw new Error('Report download failed')
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '')
+        throw new Error(`Report download failed (${res.status}): ${detail || 'No response body'}`)
+    }
     const blob = await res.blob()
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
