@@ -74,5 +74,17 @@ export const commentOnUpdate = (updateId, body) => api.post(`/product-updates/${
 
 // Admin
 export const getDashboard = () => api.get('/admin/dashboard/')
+export const downloadReport = async (type, format) => {
+    const token = localStorage.getItem('access_token')
+    const url = `${API_URL}/admin/report/?type=${type}&format=${format}`
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) throw new Error('Report download failed')
+    const blob = await res.blob()
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `paramount_${type}_report.${format}`
+    link.click()
+    URL.revokeObjectURL(link.href)
+}
 
 export default api
