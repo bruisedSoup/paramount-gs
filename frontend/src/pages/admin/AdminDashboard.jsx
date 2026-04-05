@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { getDashboard } from '../../services/api'
-import { Package, ShoppingBag, DollarSign, Users, BarChart3, TrendingUp } from 'lucide-react'
+import { getDashboard, downloadReport } from '../../services/api'
+import toast from 'react-hot-toast'
+import { Package, ShoppingBag, DollarSign, Users, BarChart3, TrendingUp, Download, FileText, File } from 'lucide-react'
 
 const T = {
     bg: '#f5f5f7',
@@ -18,10 +19,37 @@ const T = {
 
 export default function AdminDashboard() {
     const [data, setData] = useState(null)
+    const [showReportMenu, setShowReportMenu] = useState(false)
+    const [downloading, setDownloading] = useState(false)
+    const menuRef = useRef(null)
 
     useEffect(() => {
         getDashboard().then(r => setData(r.data)).catch(err => console.error('Dashboard load failed:', err))
     }, [])
+
+    // close report dropdown when clicking outside
+    useEffect(() => {
+        const handler = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setShowReportMenu(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [])
+
+    const handleDownload = async (type, format) => {
+        setShowReportMenu(false)
+        setDownloading(true)
+        const label = `${type.charAt(0).toUpperCase() + type.slice(1)} ${format.toUpperCase()}`
+        const toastId = toast.loading(`Generating ${label} report...`)
+        try {
+            await downloadReport(type, format)
+            toast.success(`${label} report downloaded!`, { id: toastId })
+        } catch {
+            toast.error('Download failed. Please try again.', { id: toastId })
+        } finally {
+            setDownloading(false)
+        }
+    }
 
     const stats = data ? [
         { label: 'Total Products', value: data.total_products, icon: Package, color: T.accent, bgColor: 'rgba(0, 102, 204, 0.08)' },
@@ -33,11 +61,75 @@ export default function AdminDashboard() {
     return (
         <div style={{ minHeight: '100vh', backgroundColor: T.bg, paddingBottom: '60px' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '12px' }}>
                     <h1 style={{ fontSize: '32px', fontWeight: '800', color: T.text, margin: 0, letterSpacing: '-0.02em' }}>Dashboard</h1>
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <Link to="/admin/products" style={{ background: T.accent, color: '#fff', padding: '10px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: '700', fontSize: '14px', transition: 'background 0.2s' }} onMouseEnter={e => e.target.style.background = T.accentHover} onMouseLeave={e => e.target.style.background = T.accent}>Products</Link>
                         <Link to="/admin/orders" style={{ background: T.accent2, color: '#fff', padding: '10px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: '700', fontSize: '14px', transition: 'background 0.2s' }} onMouseEnter={e => e.target.style.background = '#2cb04a'} onMouseLeave={e => e.target.style.background = T.accent2}>Orders</Link>
+
+                        {/* ── Download Report dropdown ── */}
+                        <div ref={menuRef} style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setShowReportMenu(v => !v)}
+                                disabled={downloading}
+                                style={{
+                                    background: downloading ? '#aaa' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                                    color: '#fff', border: 'none', borderRadius: '12px',
+                                    padding: '10px 20px', cursor: downloading ? 'not-allowed' : 'pointer',
+                                    fontWeight: '700', fontSize: '14px',
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 10px rgba(124,58,237,0.3)',
+                                }}
+                                onMouseEnter={e => { if (!downloading) e.currentTarget.style.boxShadow = '0 4px 18px rgba(124,58,237,0.5)' }}
+                                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 10px rgba(124,58,237,0.3)'}
+                            >
+                                <Download size={16} />
+                                {downloading ? 'Downloading...' : 'Download Report'}
+                            </button>
+
+                            {showReportMenu && (
+                                <div style={{
+                                    position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                                    background: '#fff', border: `1px solid ${T.border}`,
+                                    borderRadius: '14px', padding: '8px',
+                                    boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                                    zIndex: 200, minWidth: '220px',
+                                    animation: 'fadeInMenu 0.15s ease',
+                                }}>
+                                    <style>{`@keyframes fadeInMenu{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+
+                                    <p style={{ fontSize: '10px', fontWeight: '800', color: T.muted, textTransform: 'uppercase', letterSpacing: '0.6px', padding: '4px 10px 6px', margin: 0 }}>Products Report</p>
+                                    {[['pdf', FileText, '#7c3aed', 'PDF'], ['csv', File, '#0066cc', 'CSV']].map(([fmt, Icon, clr, lbl]) => (
+                                        <button key={`p-${fmt}`}
+                                            onClick={() => handleDownload('products', fmt)}
+                                            style={{ width: '100%', background: 'none', border: 'none', borderRadius: '8px', padding: '9px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#f5f5f7'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                        >
+                                            <div style={{ background: `${clr}20`, borderRadius: '6px', padding: '5px', display: 'flex' }}><Icon size={14} color={clr} /></div>
+                                            <span style={{ color: T.text, fontSize: '13px', fontWeight: '600' }}>Products as {lbl}</span>
+                                        </button>
+                                    ))}
+
+                                    <div style={{ height: '1px', background: T.border, margin: '6px 0' }} />
+
+                                    <p style={{ fontSize: '10px', fontWeight: '800', color: T.muted, textTransform: 'uppercase', letterSpacing: '0.6px', padding: '4px 10px 6px', margin: 0 }}>Orders Report</p>
+                                    {[['pdf', FileText, '#7c3aed', 'PDF'], ['csv', File, '#0066cc', 'CSV']].map(([fmt, Icon, clr, lbl]) => (
+                                        <button key={`o-${fmt}`}
+                                            onClick={() => handleDownload('orders', fmt)}
+                                            style={{ width: '100%', background: 'none', border: 'none', borderRadius: '8px', padding: '9px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#f5f5f7'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                        >
+                                            <div style={{ background: `${clr}20`, borderRadius: '6px', padding: '5px', display: 'flex' }}><Icon size={14} color={clr} /></div>
+                                            <span style={{ color: T.text, fontSize: '13px', fontWeight: '600' }}>Orders as {lbl}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {/* ── end Download Report ── */}
                     </div>
                 </div>
 
