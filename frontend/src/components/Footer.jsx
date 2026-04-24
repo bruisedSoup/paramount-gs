@@ -99,7 +99,7 @@ function NavLink({ item }) {
 /** A single nav column with a heading and list of links */
 function NavColumn({ heading, items }) {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        <div className="footer-nav-column" style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             <p style={{
                 fontSize: '14px',
                 fontWeight: '600',
@@ -147,30 +147,66 @@ export default function Footer() {
                 }
                 @media (max-width: 900px) {
                     .footer-top-grid {
-                        grid-template-columns: 1fr 1fr !important;
+                        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
                         gap: 2.5rem !important;
                     }
                     .footer-brand-col {
                         grid-column: 1 / -1;
                     }
+                    .footer-links-grid {
+                        grid-column: 1 / 2;
+                    }
                     .footer-newsletter-col {
-                        grid-column: 1 / -1;
+                        grid-column: 2 / 3;
                     }
                 }
                 @media (max-width: 560px) {
                     .footer-top-grid {
                         grid-template-columns: 1fr !important;
+                        gap: 1.75rem !important;
+                    }
+                    .footer-shell {
+                        padding: 36px 20px 28px !important;
+                    }
+                    .footer-brand-copy {
+                        max-width: none !important;
+                    }
+                    .footer-links-grid {
+                        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                        gap: 22px 18px !important;
+                    }
+                    .footer-nav-column:last-child {
+                        grid-column: 1 / -1;
+                    }
+                    .footer-newsletter-col {
+                        gap: 16px !important;
+                    }
+                    .footer-newsletter-row {
+                        flex-direction: column !important;
+                    }
+                    .footer-newsletter-row button {
+                        width: 100% !important;
+                        justify-content: center !important;
                     }
                     .footer-bottom-bar {
                         flex-direction: column !important;
-                        align-items: flex-start !important;
-                        gap: 16px !important;
+                        align-items: center !important;
+                        text-align: center !important;
+                        gap: 14px !important;
                     }
                     .footer-bottom-right {
-                        display: none !important;
+                        display: block !important;
                     }
                     .footer-cards-row {
                         flex-wrap: wrap !important;
+                        justify-content: center !important;
+                        gap: 10px !important;
+                    }
+                    .footer-bottom-copy {
+                        white-space: normal !important;
+                    }
+                    .footer-bottom-shell {
+                        padding: 16px 20px 20px !important;
                     }
                 }
             `}</style>
@@ -181,7 +217,7 @@ export default function Footer() {
                 fontFamily: FF,
             }}>
                 {/* ── Top section ── */}
-                <div style={{
+                <div className="footer-shell" style={{
                     maxWidth: '980px',
                     margin: '0 auto',
                     padding: '52px 22px 40px',
@@ -190,7 +226,7 @@ export default function Footer() {
                         className="footer-top-grid"
                         style={{
                             display: 'grid',
-                            gridTemplateColumns: '240px 1fr 1fr 1fr 1fr',
+                            gridTemplateColumns: '240px minmax(0, 1fr) 280px',
                             gap: '2rem',
                             alignItems: 'start',
                         }}
@@ -226,7 +262,7 @@ export default function Footer() {
                                     unbox lab
                                 </span>
                             </button>
-                            <p style={{
+                            <p className="footer-brand-copy" style={{
                                 fontSize: '13px',
                                 color: '#6e6e73',
                                 lineHeight: '1.65',
@@ -238,9 +274,18 @@ export default function Footer() {
                         </div>
 
                         {/* Nav columns */}
-                        <NavColumn heading="Store" items={NAV_STORE} />
-                        <NavColumn heading="Info" items={NAV_INFO} />
-                        <NavColumn heading="Legal" items={NAV_LEGAL} />
+                        <div
+                            className="footer-links-grid"
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                                gap: '2rem',
+                            }}
+                        >
+                            <NavColumn heading="Store" items={NAV_STORE} />
+                            <NavColumn heading="Info" items={NAV_INFO} />
+                            <NavColumn heading="Legal" items={NAV_LEGAL} />
+                        </div>
 
                         {/* Newsletter + social column */}
                         <div className="footer-newsletter-col" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -255,7 +300,7 @@ export default function Footer() {
                             </p>
 
                             {/* Email subscribe */}
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                            <div className="footer-newsletter-row" style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
                                 <input
                                     className="footer-email-input"
                                     type="email"
@@ -348,7 +393,7 @@ export default function Footer() {
                 </div>
 
                 {/* ── Bottom bar ── */}
-                <div style={{
+                <div className="footer-bottom-shell" style={{
                     borderTop: '1px solid #d2d2d7',
                     maxWidth: '980px',
                     margin: '0 auto',
@@ -364,7 +409,7 @@ export default function Footer() {
                         }}
                     >
                         {/* Copyright */}
-                        <p style={{
+                        <p className="footer-bottom-copy" style={{
                             fontSize: '12px',
                             color: '#6e6e73',
                             margin: 0,
