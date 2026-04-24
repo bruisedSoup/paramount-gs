@@ -168,12 +168,20 @@ export default function Footer() {
                     .footer-shell {
                         padding: 36px 20px 28px !important;
                     }
+                    .footer-brand-col {
+                        order: 1;
+                    }
+                    .footer-newsletter-col {
+                        order: 2;
+                        grid-column: auto !important;
+                    }
                     .footer-brand-copy {
                         max-width: none !important;
                     }
                     .footer-links-grid {
+                        order: 3;
                         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                        gap: 22px 18px !important;
+                        gap: 24px 18px !important;
                     }
                     .footer-nav-column:last-child {
                         grid-column: 1 / -1;
@@ -181,12 +189,32 @@ export default function Footer() {
                     .footer-newsletter-col {
                         gap: 16px !important;
                     }
+                    .footer-newsletter-title {
+                        font-size: 16px !important;
+                    }
                     .footer-newsletter-row {
                         flex-direction: column !important;
                     }
+                    .footer-newsletter-row input,
                     .footer-newsletter-row button {
                         width: 100% !important;
+                    }
+                    .footer-newsletter-row button {
                         justify-content: center !important;
+                    }
+                    .footer-social-row {
+                        gap: 12px !important;
+                    }
+                    .footer-brand-button {
+                        gap: 12px !important;
+                        margin-bottom: 12px !important;
+                    }
+                    .footer-brand-logo {
+                        height: 34px !important;
+                    }
+                    .footer-brand-name {
+                        font-size: 17px !important;
+                        line-height: 1.05 !important;
                     }
                     .footer-bottom-bar {
                         flex-direction: column !important;
@@ -234,6 +262,7 @@ export default function Footer() {
                         {/* Brand column */}
                         <div className="footer-brand-col">
                             <button
+                                className="footer-brand-button"
                                 type="button"
                                 onClick={() => navigate('/')}
                                 style={{
@@ -250,9 +279,10 @@ export default function Footer() {
                                 <img
                                     src={logoImg}
                                     alt="Unbox Lab logo"
+                                    className="footer-brand-logo"
                                     style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
                                 />
-                                <span style={{
+                                <span className="footer-brand-name" style={{
                                     fontSize: '20px',
                                     fontWeight: '700',
                                     color: '#111',
@@ -273,23 +303,9 @@ export default function Footer() {
                             </p>
                         </div>
 
-                        {/* Nav columns */}
-                        <div
-                            className="footer-links-grid"
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                                gap: '2rem',
-                            }}
-                        >
-                            <NavColumn heading="Store" items={NAV_STORE} />
-                            <NavColumn heading="Info" items={NAV_INFO} />
-                            <NavColumn heading="Legal" items={NAV_LEGAL} />
-                        </div>
-
                         {/* Newsletter + social column */}
                         <div className="footer-newsletter-col" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <p style={{
+                            <p className="footer-newsletter-title" style={{
                                 fontSize: '18px',
                                 fontWeight: '700',
                                 color: '#111',
@@ -354,7 +370,7 @@ export default function Footer() {
                             </div>
 
                             {/* Social icons */}
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            <div className="footer-social-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                 {SOCIALS.map(({ icon: Icon, label }) => (
                                     <button
                                         key={label}
@@ -388,6 +404,20 @@ export default function Footer() {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Nav columns */}
+                        <div
+                            className="footer-links-grid"
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                                gap: '2rem',
+                            }}
+                        >
+                            <NavColumn heading="Store" items={NAV_STORE} />
+                            <NavColumn heading="Info" items={NAV_INFO} />
+                            <NavColumn heading="Legal" items={NAV_LEGAL} />
                         </div>
                     </div>
                 </div>
