@@ -97,9 +97,9 @@ function NavLink({ item }) {
 }
 
 /** A single nav column with a heading and list of links */
-function NavColumn({ heading, items }) {
+function NavColumn({ heading, items, className = '' }) {
     return (
-        <div className="footer-nav-column" style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        <div className={`footer-nav-column ${className}`.trim()} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             <p style={{
                 fontSize: '14px',
                 fontWeight: '600',
@@ -147,43 +147,43 @@ export default function Footer() {
                 }
                 @media (max-width: 900px) {
                     .footer-top-grid {
-                        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+                        grid-template-columns: 1fr 1fr !important;
                         gap: 2.5rem !important;
                     }
                     .footer-brand-col {
                         grid-column: 1 / -1;
                     }
-                    .footer-links-grid {
-                        grid-column: 1 / 2;
-                    }
                     .footer-newsletter-col {
-                        grid-column: 2 / 3;
+                        grid-column: 1 / -1;
                     }
                 }
                 @media (max-width: 560px) {
                     .footer-top-grid {
-                        grid-template-columns: 1fr !important;
-                        gap: 1.75rem !important;
+                        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                        gap: 24px 18px !important;
                     }
                     .footer-shell {
                         padding: 36px 20px 28px !important;
                     }
                     .footer-brand-col {
                         order: 1;
+                        grid-column: 1 / -1;
                     }
                     .footer-newsletter-col {
                         order: 2;
-                        grid-column: auto !important;
+                        grid-column: 1 / -1 !important;
                     }
                     .footer-brand-copy {
                         max-width: none !important;
                     }
-                    .footer-links-grid {
+                    .footer-store-col {
                         order: 3;
-                        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                        gap: 24px 18px !important;
                     }
-                    .footer-nav-column:last-child {
+                    .footer-info-col {
+                        order: 4;
+                    }
+                    .footer-legal-col {
+                        order: 5;
                         grid-column: 1 / -1;
                     }
                     .footer-newsletter-col {
@@ -254,7 +254,7 @@ export default function Footer() {
                         className="footer-top-grid"
                         style={{
                             display: 'grid',
-                            gridTemplateColumns: '240px minmax(0, 1fr) 280px',
+                            gridTemplateColumns: '240px 1fr 1fr 1fr 1fr',
                             gap: '2rem',
                             alignItems: 'start',
                         }}
@@ -302,6 +302,11 @@ export default function Footer() {
                                 Shop high-performance tech built for real life — smart, durable, and ready to handle everything you do.
                             </p>
                         </div>
+
+                        {/* Nav columns */}
+                        <NavColumn heading="Store" items={NAV_STORE} className="footer-store-col" />
+                        <NavColumn heading="Info" items={NAV_INFO} className="footer-info-col" />
+                        <NavColumn heading="Legal" items={NAV_LEGAL} className="footer-legal-col" />
 
                         {/* Newsletter + social column */}
                         <div className="footer-newsletter-col" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -404,20 +409,6 @@ export default function Footer() {
                                     </button>
                                 ))}
                             </div>
-                        </div>
-
-                        {/* Nav columns */}
-                        <div
-                            className="footer-links-grid"
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                                gap: '2rem',
-                            }}
-                        >
-                            <NavColumn heading="Store" items={NAV_STORE} />
-                            <NavColumn heading="Info" items={NAV_INFO} />
-                            <NavColumn heading="Legal" items={NAV_LEGAL} />
                         </div>
                     </div>
                 </div>
