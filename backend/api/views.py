@@ -658,7 +658,7 @@ class ReportDownloadView(APIView):
     def _products_csv(self, products, category_map, now):
         buf = io.StringIO()
         w = csv.writer(buf)
-        w.writerow(['PARAMOUNT GS - PRODUCTS SUMMARY REPORT'])
+        w.writerow([' UNBOX LAB - PRODUCTS SUMMARY REPORT'])
         w.writerow(['Generated:', now])
         w.writerow(['Total Products:', len(products)])
         w.writerow([])
@@ -674,7 +674,7 @@ class ReportDownloadView(APIView):
             status = 'In Stock' if stock > 5 else ('Low Stock' if stock > 0 else 'Out of Stock')
             w.writerow([p.name, (p.category or 'other').capitalize(), f"{float(p.price or 0):,.2f}", stock, status])
         resp = HttpResponse(buf.getvalue(), content_type='text/csv')
-        resp['Content-Disposition'] = 'attachment; filename="paramount_products_report.csv"'
+        resp['Content-Disposition'] = 'attachment; filename="unboxlab_products_report.csv"'
         return resp
 
     def _products_pdf(self, products, category_map, now):
@@ -694,7 +694,7 @@ class ReportDownloadView(APIView):
         sub_s     = ParagraphStyle('s', parent=styles['Normal'],  textColor=colors.HexColor('#6e6e73'), fontSize=10, spaceAfter=2)
         section_s = ParagraphStyle('h', parent=styles['Heading2'],textColor=DARK, fontSize=13, spaceBefore=14, spaceAfter=6)
         story = []
-        story.append(Paragraph('Paramount GS', title_s))
+        story.append(Paragraph('UnboxLab    ', title_s))
         story.append(Paragraph('Products Summary Report', section_s))
         story.append(Paragraph(f'Generated: {now}  |  Total Products: {len(products)}', sub_s))
         story.append(Spacer(1, 0.4*cm))
@@ -733,7 +733,7 @@ class ReportDownloadView(APIView):
         doc.build(story)
         buf.seek(0)
         resp = HttpResponse(buf.read(), content_type='application/pdf')
-        resp['Content-Disposition'] = 'attachment; filename="paramount_products_report.pdf"'
+        resp['Content-Disposition'] = 'attachment; filename="unboxlab_products_report.pdf"'
         return resp
 
     # ── Orders ────────────────────────────────────────────
@@ -753,7 +753,7 @@ class ReportDownloadView(APIView):
     def _orders_csv(self, orders, status_map, total_revenue, delivered_revenue, now):
         buf = io.StringIO()
         w = csv.writer(buf)
-        w.writerow(['PARAMOUNT GS - ORDERS SUMMARY REPORT'])
+        w.writerow(['UNBOX LAB - ORDERS SUMMARY REPORT'])
         w.writerow(['Generated:', now])
         w.writerow(['Total Orders:', len(orders)])
         w.writerow(['Total Revenue (PHP):', f'{total_revenue:,.2f}'])
@@ -775,7 +775,7 @@ class ReportDownloadView(APIView):
                 str(o.created_at)[:10] if o.created_at else '',
             ])
         resp = HttpResponse(buf.getvalue(), content_type='text/csv')
-        resp['Content-Disposition'] = 'attachment; filename="paramount_orders_report.csv"'
+        resp['Content-Disposition'] = 'attachment; filename="unboxlab_orders_report.csv"'
         return resp
 
     def _orders_pdf(self, orders, status_map, total_revenue, delivered_revenue, now):
@@ -842,5 +842,5 @@ class ReportDownloadView(APIView):
         doc.build(story)
         buf.seek(0)
         resp = HttpResponse(buf.read(), content_type='application/pdf')
-        resp['Content-Disposition'] = 'attachment; filename="paramount_orders_report.pdf"'
+        resp['Content-Disposition'] = 'attachment; filename="unboxlab_orders_report.pdf"'
         return resp
